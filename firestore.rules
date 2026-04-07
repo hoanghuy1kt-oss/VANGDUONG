@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Helper function to check if user has access to project
+    function hasProjectAccess(projectCode) {
+      return request.auth != null && 
+        projectCode in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.assignedProjects;
+    }
+    
+    // Helper function to check if user owns the resource
+    function isOwner(resourceOwnerId) {
+      return request.auth != null && request.auth.uid == resourceOwnerId;
+    }
+    
+    // Helper function to check if transaction is locked
+    function isLocked(data) {
+      return data.isLocked == true;
+    }
+
+    // =====================
+    // USERS COLLECTION
+    // =====================
+    match /users/{userId} {
+      // Anyone authenticated can read user profiles
+      allow read: if request.auth != null;
+      
+      // Only admins can write to user profiles
+      allow write: if isAdmin();
+      
+      // Users can read their own profile and update limited fields
+      allow update: if isOwner(userId) && 
+        // Users can only update certain fields themselves
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['displayName']) ||
+        // Admins can update everything
+        isAdmin();
+    }
+
+    // =====================
+    // TRANSACTIONS COLLECTION
+    // =====================
+    match /transactions/{transactionId} {
+      // Read access: Admin can read all, users can only read their assigned projects
+      allow read: if request.auth != null && (
+        isAdmin() || 
+        hasProjectAccess(resource.data.projectCode)
+      );
+      
+      // Create: Authenticated users can create transactions for their assigned projects
+      allow create: if request.auth != null && 
+        hasProjectAccess(request.resource.data.projectCode) &&
+        request.resource.data.performedBy == request.auth.uid;
+      
+      // Update: 
+      // - Admin can update anything
+      // - Users can update unlocked transactions in their projects
+      // - Locked transactions cannot be modified (except by admin)
+      allow update: if request.auth != null && (
+        isAdmin() ||
+        (
+          !isLocked(resource.data) &&
+          hasProjectAccess(resource.data.projectCode) &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly([
+              'description', 'income', 'expense', 'categoryCode', 
+              'subCategory', 'invoiceUrl', 'invoiceName', 'updatedAt'
+            ])
+        )
+      );
+      
+      // Delete:
+      // - Admin can delete anything
+      // - Users can only delete unlocked transactions in their projects
+      allow delete: if request.auth != null && (
+        isAdmin() ||
+        (!isLocked(resource.data) && hasProjectAccess(resource.data.projectCode))
+      );
+    }
+
+    // =====================
+    // PERIOD LOCKS COLLECTION
+    // =====================
+    match /periodLocks/{periodId} {
+      // Anyone authenticated can read lock status
+      allow read: if request.auth != null;
+      
+      // Only admins can create/update period locks
+      allow create, update: if isAdmin();
+      
+      // Only admins can delete period locks
+      allow delete: if isAdmin();
+    }
+
+    // =====================
+    // PROJECT CATEGORIES COLLECTION
+    // =====================
+    match /projectCategories/{projectCode} {
+      // Anyone authenticated can read project categories
+      allow read: if request.auth != null;
+      
+      // Only admins can manage project categories
+      allow write: if isAdmin();
+    }
+  }
+}
