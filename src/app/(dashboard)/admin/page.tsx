@@ -74,6 +74,11 @@ export default function AdminPage() {
   };
 
   const handleSaveUser = async () => {
+    if (userForm.role === 'user' && (!userForm.assignedProjects || userForm.assignedProjects.length === 0)) {
+      alert('Lỗi: Bạn bắt buộc phải gán ít nhất một dự án (Mã DA) cho tài khoản Nhân viên!');
+      return;
+    }
+
     try {
       setIsProcessing(true);
       let res;
@@ -596,8 +601,8 @@ export default function AdminPage() {
             ) : (
               <div className="border border-border/70 rounded-xl p-4 bg-muted/20">
                 <Label className="mb-3 flex items-center justify-between text-base font-semibold text-primary">
-                  <span>Trực quyền đọc Dự án</span>
-                  <span className="text-xs font-normal text-muted-foreground px-2 py-0.5 bg-background rounded-md border">Multi-select</span>
+                  <span>Trực quyền đọc Dự án <span className="text-rose-500">*</span></span>
+                  <span className="text-xs font-normal text-muted-foreground px-2 py-0.5 bg-background rounded-md border">Bắt buộc & Multi-select</span>
                 </Label>
                 <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto pr-1">
                   {localProjects.filter(p => !p.isHidden).map(p => {
