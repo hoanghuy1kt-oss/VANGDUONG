@@ -86,11 +86,11 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center px-4">
-        <div className="flex items-center gap-2 mr-8">
-          <div className="p-2 bg-primary rounded-lg">
-            <Lock className="h-5 w-5 text-white" />
+        <div className="flex items-center gap-3 mr-8 cursor-pointer group" onClick={() => router.push('/dashboard')}>
+          <div className="flex shrink-0 items-center justify-center bg-white rounded-xl overflow-hidden h-[38px] w-[38px] shadow-sm ring-1 ring-border group-hover:shadow-md transition-shadow">
+            <img src="/logo.ico" alt="Logo" className="h-full w-full object-contain p-0.5 bg-white" />
           </div>
-          <span className="font-bold text-lg hidden sm:inline">HTQL Tài Chính</span>
+          <span className="font-extrabold tracking-tight text-lg hidden sm:inline text-primary">HTQL Tài Chính</span>
         </div>
 
         <nav className="hidden md:flex items-center gap-6 flex-1">
