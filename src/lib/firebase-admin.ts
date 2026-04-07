@@ -25,7 +25,7 @@ export function getFirebaseAdmin() {
 
   adminApp = admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'hethongquanly-ffdbd.appspot.com'
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'hethongquanly-ffdbd.firebasestorage.app'
   });
 
   return adminApp;
