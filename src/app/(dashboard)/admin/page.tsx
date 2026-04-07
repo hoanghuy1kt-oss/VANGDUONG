@@ -400,18 +400,18 @@ export default function AdminPage() {
         <div className="space-y-6 animate-in fade-in-50 zoom-in-95 duration-300">
           <div className="grid gap-6 lg:grid-cols-12">
             <Card className="col-span-7 border-border/60 shadow-sm flex flex-col min-h-[600px]">
-              <CardHeader className="bg-muted/10 border-b border-border/40 flex-row items-center justify-between py-4">
-                <div>
+              <CardHeader className="bg-muted/10 border-b border-border/40 flex flex-col sm:flex-row sm:items-center justify-between py-3 sm:py-4 gap-3 sm:gap-4">
+                <div className="space-y-0.5">
                   <CardTitle className="text-lg">Tùy biến Mã Dự án</CardTitle>
-                  <CardDescription>Cấu hình ẩn, tạm ngưng hoặc rút khỏi báo cáo.</CardDescription>
+                  <CardDescription className="text-xs sm:text-sm leading-snug pr-2">Cấu hình ẩn, tạm ngưng hoặc rút khỏi báo cáo.</CardDescription>
                 </div>
                 <Button 
                    variant="outline" size="sm" 
                    onClick={() => setShowHiddenProjects(!showHiddenProjects)}
-                   className="text-muted-foreground flex items-center gap-2 bg-background border-border"
+                   className="text-muted-foreground flex items-center gap-1.5 bg-background border-border whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3 h-8 sm:h-9 w-fit shadow-sm"
                 >
-                   {showHiddenProjects ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                   {showHiddenProjects ? 'Đang hiện DA ẩn' : 'Đang giấu DA ẩn'}
+                   {showHiddenProjects ? <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <EyeOff className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+                   <span>{showHiddenProjects ? 'Đang hiện DA ẩn' : 'Đang giấu DA ẩn'}</span>
                 </Button>
               </CardHeader>
               <CardContent className="flex-1 p-0 flex flex-col">

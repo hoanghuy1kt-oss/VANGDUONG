@@ -149,23 +149,23 @@ export function AddTransactionDialog({ onAddTransaction }: AddTransactionDialogP
           Thêm Giao Dịch
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl px-4 sm:px-6 w-[95vw] rounded-xl sm:rounded-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl">Thêm Giao Dịch Mới</DialogTitle>
           <DialogDescription>
             Điền đầy đủ thông tin bên dưới. Mã chi phí bắt buộc đối với lệnh Chi.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-6 py-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div className="space-y-2">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 py-2 sm:py-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+            <div className="space-y-1 sm:space-y-2">
               <Label htmlFor="date">Ngày thao tác</Label>
-              <Input id="date" type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} required className="focus:ring-2" />
+              <Input id="date" type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} required className="focus:ring-2 h-10" />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1 sm:space-y-2">
               <Label htmlFor="type">Phân loại</Label>
               <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v as 'income' | 'expense' })}>
-                <SelectTrigger className="focus:ring-2 uppercase font-medium">
+                <SelectTrigger className="focus:ring-2 uppercase font-medium h-10">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -176,19 +176,20 @@ export function AddTransactionDialog({ onAddTransaction }: AddTransactionDialogP
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1 sm:space-y-2">
             <Label htmlFor="description">Nội dung diễn giải</Label>
-            <Input id="description" placeholder="VD: Thu tiền cọc hợp đồng X..." value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} required />
+            <Input id="description" placeholder="VD: Thu tiền cọc hợp đồng X..." value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} required className="h-10" />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+            <div className="space-y-1 sm:space-y-2">
               <Label htmlFor="amount">Số tiền quy đổi (VND)</Label>
               <Input 
                 id="amount" 
                 type="text" 
                 placeholder="Nhập số tiền..." 
                 value={formData.amount} 
+                className="h-10"
                 onChange={(e) => {
                   const rawValue = e.target.value.replace(/\D/g, '');
                   if (!rawValue) {
@@ -201,10 +202,10 @@ export function AddTransactionDialog({ onAddTransaction }: AddTransactionDialogP
                 required 
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1 sm:space-y-2">
               <Label htmlFor="project">Dự án áp dụng</Label>
               <Select value={formData.projectCode} onValueChange={(v) => setFormData({ ...formData, projectCode: v })} required>
-                <SelectTrigger>
+                <SelectTrigger className="h-10">
                   <SelectValue placeholder="-- Trống --" />
                 </SelectTrigger>
                 <SelectContent>
@@ -218,11 +219,11 @@ export function AddTransactionDialog({ onAddTransaction }: AddTransactionDialogP
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+            <div className="space-y-1 sm:space-y-2">
               <Label htmlFor="category">Phân nhóm Chi Phí (Cost Code)</Label>
               <Select value={formData.categoryCode} onValueChange={(v) => setFormData({ ...formData, categoryCode: v as CategoryCode })} disabled={formData.type === 'income'}>
-                <SelectTrigger>
+                <SelectTrigger className="h-10">
                   <SelectValue placeholder={formData.type === 'income' ? 'Không áp dụng cho Thu' : 'Chọn danh mục mục chi'} />
                 </SelectTrigger>
                 <SelectContent>
@@ -234,13 +235,13 @@ export function AddTransactionDialog({ onAddTransaction }: AddTransactionDialogP
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1 sm:space-y-2">
               <Label htmlFor="subCategory">Chi tiết Phụ chi (không bắt buộc)</Label>
-              <Input id="subCategory" placeholder="VD: Mua thuốc, Tiền lương..." value={formData.subCategory} onChange={(e) => setFormData({ ...formData, subCategory: e.target.value })} />
+              <Input id="subCategory" placeholder="VD: Mua thuốc, Tiền lương..." value={formData.subCategory} onChange={(e) => setFormData({ ...formData, subCategory: e.target.value })} className="h-10" />
             </div>
           </div>
 
-          <div className="border-2 border-dashed border-primary/20 rounded-xl p-8 hover:bg-primary/5 transition-colors text-center relative">
+          <div className="border-2 border-dashed border-primary/20 rounded-xl p-5 sm:p-8 hover:bg-primary/5 transition-colors text-center relative">
             <input 
               type="file" 
               multiple
@@ -277,9 +278,9 @@ export function AddTransactionDialog({ onAddTransaction }: AddTransactionDialogP
             )}
           </div>
 
-          <DialogFooter className="pt-2">
-            <Button type="button" variant="ghost" onClick={() => { setOpen(false); setFiles([]); }} disabled={isUploading || isCompressing}>Hủy bỏ</Button>
-            <Button type="submit" className="min-w-[120px]" disabled={isUploading || isCompressing}>
+          <DialogFooter className="pt-2 gap-2 sm:gap-0 mt-4 sm:mt-0">
+            <Button type="button" variant="ghost" onClick={() => { setOpen(false); setFiles([]); }} disabled={isUploading || isCompressing} className="w-full sm:w-auto h-11 sm:h-10">Hủy bỏ</Button>
+            <Button type="submit" className="min-w-[120px] w-full sm:w-auto h-11 sm:h-10" disabled={isUploading || isCompressing}>
               {isUploading ? 'Đang tải & lưu...' : 'Xác nhận'}
             </Button>
           </DialogFooter>
