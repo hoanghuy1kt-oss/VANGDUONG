@@ -38,3 +38,34 @@
     color: var(--color-foreground);
   }
 }
+
+@media print {
+  /* Cho phép ngắt qua nhiều trang, chống bị cắt ngang do overflow-hidden */
+  html, body, main, .container, .min-h-screen {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  
+  /* Mọi class có chữ overflow đều phải reset về visible khi in */
+  [class*="overflow-"] {
+    overflow: visible !important;
+  }
+
+  /* Ẩn nút nhấn không cần thiết khi in ra giấy */
+  button, nav, header {
+    display: none !important;
+  }
+
+  /* Tránh ngắt nội dung ở nửa chừng thẻ */
+  .border, [class*="rounded-"], .accordion-item {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* In đầy đủ màu nền và màu chữ */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
