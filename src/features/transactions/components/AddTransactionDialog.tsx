@@ -4,7 +4,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { CATEGORIES, PROJECTS } from '@/constants';
+import { CATEGORIES } from '@/constants';
+import { useAppContext } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Transaction, CategoryCode } from '@/types';
 import { Plus, Upload, Loader2 } from 'lucide-react';
 import { FinanceMath } from '@/lib/finance'; // <-- Dùng thư viện chuẩn hóa!
@@ -15,6 +17,16 @@ interface AddTransactionDialogProps {
 }
 
 export function AddTransactionDialog({ onAddTransaction }: AddTransactionDialogProps) {
+  const { projects: globalProjects } = useAppContext();
+  const { user } = useAuth();
+  
+  const visibleProjects = globalProjects.filter(p => {
+    if (p.excludeFromReports || p.isHidden) return false;
+    if (user?.role === 'admin') return true;
+    if (user?.role === 'user' && user.assignedProjects?.includes(p.code)) return true;
+    return false;
+  });
+
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -209,11 +221,15 @@ export function AddTransactionDialog({ onAddTransaction }: AddTransactionDialogP
                   <SelectValue placeholder="-- Trống --" />
                 </SelectTrigger>
                 <SelectContent>
-                  {PROJECTS.map((p) => (
-                    <SelectItem key={p.code} value={p.code}>
-                      <span className="font-semibold text-primary">{p.code}</span> - {p.name}
-                    </SelectItem>
-                  ))}
+                  {visibleProjects.length === 0 ? (
+                    <div className="p-2 text-sm text-center text-muted-foreground italic">Không có dự án khả dụng</div>
+                  ) : (
+                    visibleProjects.map((p) => (
+                      <SelectItem key={p.code} value={p.code}>
+                        <span className="font-semibold text-primary">{p.code}</span> - {p.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
