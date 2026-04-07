@@ -150,33 +150,56 @@ export default function TransactionsPage() {
               </span>
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-auto rounded-xl border shadow-sm flex items-center justify-center p-2 relative bg-black/5">
-            {selectedInvoices.length > 0 && selectedInvoices[currentInvoiceIdx].url && (
-              <div className="relative w-full h-full flex items-center justify-center min-h-[50vh]">
-                <img src={selectedInvoices[currentInvoiceIdx].url} alt="Invoice" className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-md" />
-                
-                {selectedInvoices.length > 1 && (
-                  <>
-                    <Button 
-                      variant="secondary" 
-                      size="icon" 
-                      className="absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full shadow-lg hover:scale-110 transition-transform"
-                      onClick={() => setCurrentInvoiceIdx(p => (p > 0 ? p - 1 : selectedInvoices.length - 1))}
-                    >
-                      <span className="text-xl font-bold font-mono">{'<'}</span>
-                    </Button>
-                    <Button 
-                      variant="secondary" 
-                      size="icon" 
-                      className="absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full shadow-lg hover:scale-110 transition-transform"
-                      onClick={() => setCurrentInvoiceIdx(p => (p < selectedInvoices.length - 1 ? p + 1 : 0))}
-                    >
-                      <span className="text-xl font-bold font-mono">{'>'}</span>
-                    </Button>
-                  </>
-                )}
-              </div>
-            )}
+          <div className="flex-1 overflow-auto rounded-xl border shadow-sm flex items-center justify-center p-2 relative bg-black/5 min-h-[50vh]">
+            {selectedInvoices.length > 0 && selectedInvoices[currentInvoiceIdx].url && (() => {
+              const inv = selectedInvoices[currentInvoiceIdx];
+              // Detect file extension realistically from name or url
+              const isPdf = inv.name.toLowerCase().endsWith('.pdf') || inv.url.toLowerCase().includes('.pdf');
+              const isDoc = inv.name.match(/\.(doc|docx|xls|xlsx|csv|txt|zip|rar)$/i);
+              const isDocument = isPdf || isDoc;
+
+              return (
+                <div className="relative w-full h-full flex flex-col items-center justify-center min-h-[50vh] p-4 text-center">
+                  {!isDocument ? (
+                    <img src={inv.url} alt="Invoice" className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-md" />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center space-y-4 bg-white p-8 rounded-2xl shadow-sm border border-border/50 max-w-sm w-full">
+                      <div className={`w-20 h-20 rounded-2xl flex items-center justify-center text-4xl shadow-sm ${isPdf ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}`}>
+                        {isPdf ? '📄' : '📝'}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-foreground mb-1 line-clamp-2" title={inv.name}>{inv.name}</h4>
+                        <p className="text-sm text-muted-foreground">Không thể xem trực tiếp định dạng này.</p>
+                      </div>
+                      <Button asChild className="w-full mt-2 shadow-sm rounded-xl">
+                        <a href={inv.url} target="_blank" rel="noopener noreferrer">Mở / Tải Về</a>
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {selectedInvoices.length > 1 && (
+                    <>
+                      <Button 
+                        variant="secondary" 
+                        size="icon" 
+                        className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full shadow-lg hover:scale-110 transition-transform z-10"
+                        onClick={() => setCurrentInvoiceIdx(p => (p > 0 ? p - 1 : selectedInvoices.length - 1))}
+                      >
+                        <span className="text-xl font-bold font-mono">{'<'}</span>
+                      </Button>
+                      <Button 
+                        variant="secondary" 
+                        size="icon" 
+                        className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full shadow-lg hover:scale-110 transition-transform z-10"
+                        onClick={() => setCurrentInvoiceIdx(p => (p < selectedInvoices.length - 1 ? p + 1 : 0))}
+                      >
+                        <span className="text-xl font-bold font-mono">{'>'}</span>
+                      </Button>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </DialogContent>
       </Dialog>
