@@ -230,17 +230,17 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">Tổng quan tài chính hệ thống</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-0.5">Tổng quan tài chính hệ thống</p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="space-y-1.5 flex flex-col">
-              <Label className="text-xs text-muted-foreground">Lọc theo Năm</Label>
+          <div className="grid grid-cols-2 xs:grid-cols-3 sm:flex sm:flex-row gap-2 sm:gap-3">
+            <div className="space-y-1 sm:space-y-1.5 flex flex-col">
+              <Label className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">Lọc Năm</Label>
               <Select value={dashboardFilter.year} onValueChange={(v: any) => setDashboardFilter(p => ({...p, year: v}))}>
-                <SelectTrigger className="w-[120px] h-10 bg-background shadow-sm border-border/80">
+                <SelectTrigger className="w-full sm:w-[110px] h-9 sm:h-10 bg-background shadow-sm border-border/80 rounded-lg text-sm">
                   <SelectValue placeholder="Chọn Năm" />
                 </SelectTrigger>
                 <SelectContent>
@@ -252,10 +252,10 @@ export default function DashboardPage() {
               </Select>
             </div>
 
-            <div className="space-y-1.5 flex flex-col">
-              <Label className="text-xs text-muted-foreground">Lọc theo Quý</Label>
+            <div className="space-y-1 sm:space-y-1.5 flex flex-col">
+              <Label className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">Lọc Quý</Label>
               <Select value={dashboardFilter.quarter} onValueChange={(v: any) => setDashboardFilter(p => ({...p, quarter: v}))}>
-                <SelectTrigger className="w-[120px] h-10 bg-background shadow-sm border-border/80">
+                <SelectTrigger className="w-full sm:w-[110px] h-9 sm:h-10 bg-background shadow-sm border-border/80 rounded-lg text-sm">
                   <SelectValue placeholder="Chọn Quý" />
                 </SelectTrigger>
                 <SelectContent>
@@ -268,10 +268,10 @@ export default function DashboardPage() {
               </Select>
             </div>
 
-            <div className="space-y-1.5 flex flex-col">
-              <Label className="text-xs text-muted-foreground">Lọc theo Tháng</Label>
+            <div className="space-y-1 sm:space-y-1.5 flex flex-col col-span-2 xs:col-span-1 sm:col-span-1">
+              <Label className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">Lọc Tháng</Label>
               <Select value={dashboardFilter.month} onValueChange={(v: any) => setDashboardFilter(p => ({...p, month: v}))}>
-                <SelectTrigger className="w-[130px] h-10 bg-background shadow-sm border-border/80">
+                <SelectTrigger className="w-full sm:w-[120px] h-9 sm:h-10 bg-background shadow-sm border-border/80 rounded-lg text-sm">
                   <SelectValue placeholder="Chọn Tháng" />
                 </SelectTrigger>
                 <SelectContent>
@@ -283,11 +283,11 @@ export default function DashboardPage() {
               </Select>
             </div>
           </div>
-          <div className="space-y-1.5 flex flex-col">
-            <Label className="text-xs text-muted-foreground">Dự án ({filterProjects.length === 0 ? 'Tất cả' : filterProjects.length})</Label>
+          <div className="space-y-1 sm:space-y-1.5 flex flex-col w-full sm:w-auto mt-0.5 sm:mt-0">
+            <Label className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">Dự án ({filterProjects.length === 0 ? 'Tất cả' : filterProjects.length})</Label>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="h-10 w-[200px] justify-between font-normal rounded-lg border-border/80 bg-background shadow-sm hover:bg-background">
+                <Button variant="outline" className="h-9 sm:h-10 w-full sm:w-[220px] justify-between font-normal rounded-lg border-border/80 bg-background shadow-sm hover:bg-background text-sm">
                   <span className="truncate">
                      {filterProjects.length === 0 ? 'Tất cả dự án' : filterProjects.length === 1 ? filterProjects[0] : `${filterProjects.length} dự án được chọn`}
                   </span>
@@ -336,68 +336,68 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="rounded-2xl border-border/40 shadow-sm transition-all hover:shadow-md hover:border-border/80">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <Card className="rounded-xl sm:rounded-2xl border-border/50 shadow-sm transition-all hover:shadow-md hover:border-border/80">
+          <CardHeader className="flex flex-row items-center justify-between pb-1.5 sm:pb-2 pt-4 px-4 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
               Tổng Thu
             </CardTitle>
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/10">
               <TrendingUp className="h-4 w-4 text-emerald-600" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tracking-tight text-emerald-600">
+          <CardContent className="px-4 pb-4 sm:p-6 sm:pt-0">
+            <div className="text-lg sm:text-2xl font-bold tracking-tight text-emerald-600 truncate">
               {formatCurrency(summary.totalIncome)}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-border/40 shadow-sm transition-all hover:shadow-md hover:border-border/80">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="rounded-xl sm:rounded-2xl border-border/50 shadow-sm transition-all hover:shadow-md hover:border-border/80">
+          <CardHeader className="flex flex-row items-center justify-between pb-1.5 sm:pb-2 pt-4 px-4 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
               Tổng Chi
             </CardTitle>
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-rose-500/10">
               <TrendingDown className="h-4 w-4 text-rose-600" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tracking-tight text-rose-600">
+          <CardContent className="px-4 pb-4 sm:p-6 sm:pt-0">
+            <div className="text-lg sm:text-2xl font-bold tracking-tight text-rose-600 truncate">
               {formatCurrency(summary.totalExpense)}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-border/40 shadow-sm transition-all hover:shadow-md hover:border-border/80">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="rounded-xl sm:rounded-2xl border-border/50 shadow-sm transition-all hover:shadow-md hover:border-border/80 col-span-2 sm:col-span-1">
+          <CardHeader className="flex flex-row items-center justify-between pb-1.5 sm:pb-2 pt-4 px-4 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
               Chênh Lệch
             </CardTitle>
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sky-500/10">
               <Wallet className="h-4 w-4 text-sky-600" />
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4 sm:p-6 sm:pt-0">
             <div
-              className={`text-2xl font-bold tracking-tight ${balance >= 0 ? 'text-sky-600' : 'text-amber-600'}`}
+              className={`text-xl sm:text-2xl font-bold tracking-tight truncate ${balance >= 0 ? 'text-sky-600' : 'text-amber-600'}`}
             >
               {formatCurrency(balance)}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-border/40 shadow-sm transition-all hover:shadow-md hover:border-border/80">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="hidden lg:flex flex-col rounded-xl sm:rounded-2xl border-border/50 shadow-sm transition-all hover:shadow-md hover:border-border/80">
+          <CardHeader className="flex flex-row items-center justify-between pb-1.5 sm:pb-2 pt-4 px-4 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
               Số Dự Án
             </CardTitle>
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted">
               <Lock className="h-4 w-4 text-muted-foreground" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tracking-tight">{projectCount}</div>
+          <CardContent className="px-4 pb-4 sm:p-6 sm:pt-0">
+            <div className="text-xl sm:text-2xl font-bold tracking-tight truncate">{projectCount}</div>
           </CardContent>
         </Card>
       </div>

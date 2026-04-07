@@ -36,7 +36,7 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen bg-background flex flex-col relative">
       <Header />
-      <main className="container flex-1 px-4 sm:px-6 lg:px-8 py-8 md:pb-8 pb-24 mx-auto max-w-[1400px]">
+      <main className="container flex-1 px-3 sm:px-6 lg:px-8 py-4 sm:py-8 md:pb-8 pb-20 mx-auto max-w-[1400px]">
         {children}
       </main>
       <MobileNav />

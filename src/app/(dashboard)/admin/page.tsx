@@ -228,8 +228,8 @@ export default function AdminPage() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-10 line-fade-in delay-0">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Cài đặt Hệ thống</h2>
-        <p className="text-muted-foreground mt-2">
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Cài đặt Hệ thống</h2>
+        <p className="text-sm sm:text-base text-muted-foreground mt-1 sm:mt-2">
           Quản lý phân quyền người dùng và danh mục chi tiết dự án.
         </p>
       </div>
@@ -254,14 +254,14 @@ export default function AdminPage() {
         {activeTab === 'users' && (
         <div className="space-y-4 animate-in fade-in-50 zoom-in-95 duration-300">
           <Card className="border-border/60 shadow-sm">
-            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border/40 gap-4">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border/40 gap-4 p-4 sm:p-6">
               <div>
-                <CardTitle className="text-xl">Người dùng Hệ thống</CardTitle>
-                <CardDescription className="mt-1">Tài khoản mặc định được khởi tạo với mật khẩu "123456".</CardDescription>
+                <CardTitle className="text-lg sm:text-xl">Người dùng Hệ thống</CardTitle>
+                <CardDescription className="mt-1 text-xs sm:text-sm">Tài khoản mặc định được khởi tạo với mật khẩu "123456".</CardDescription>
               </div>
-              <div className="flex gap-3">
+              <div className="flex flex-row gap-2 w-full sm:w-auto">
                 <select 
-                  className="bg-background border border-border rounded-lg text-sm px-3 focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="bg-background border border-border rounded-lg text-sm px-3 focus:outline-none focus:ring-1 focus:ring-primary flex-1 sm:flex-none h-10"
                   value={userFilter}
                   onChange={e => setUserFilter(e.target.value)}
                 >
@@ -269,13 +269,15 @@ export default function AdminPage() {
                   <option value="active">Đang mở (Active)</option>
                   <option value="inactive">Bị khóa (Inactive)</option>
                 </select>
-                <Button className="shrink-0 bg-primary/90 hover:bg-primary" onClick={handleOpenAddUser}>
-                  + Thêm tài khoản
+                <Button className="shrink-0 bg-primary/90 hover:bg-primary h-10 px-3" onClick={handleOpenAddUser}>
+                  <Plus className="h-4 w-4 sm:hidden" /> 
+                  <span className="hidden sm:inline">+ Thêm tài khoản</span>
                 </Button>
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
+              {/* Desktop View */}
+              <div className="hidden sm:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-muted/30 text-muted-foreground border-b border-border/40">
                     <tr>
@@ -337,6 +339,56 @@ export default function AdminPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Mobile View */}
+              <div className="sm:hidden flex flex-col divide-y divide-border/40">
+                {filteredUsers.length === 0 && (
+                  <div className="py-8 text-center text-muted-foreground text-sm">Không có tài khoản nào phù hợp bộ lọc.</div>
+                )}
+                {filteredUsers.map(u => (
+                  <div key={u.id} className="p-4 flex flex-col gap-3 hover:bg-muted/10 transition-colors">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-0.5">
+                        <div className="font-semibold text-sm text-foreground flex items-center gap-1.5">
+                           {u.name} {u.role === 'admin' && <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />}
+                        </div>
+                        <div className="text-muted-foreground text-[11px]">{u.email}</div>
+                      </div>
+                      <Badge variant={u.active ? 'success' : 'secondary'} className={`shadow-none rounded-full text-[10px] ${u.active ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-200 text-gray-700'}`}>
+                        {u.active ? 'Active' : 'Khóa'}
+                      </Badge>
+                    </div>
+                    {/* Projects + Actions */}
+                    <div className="flex items-end justify-between mt-1">
+                      <div className="flex flex-wrap gap-1 pr-2">
+                        {Array.isArray(u.assignedProjects) && u.assignedProjects.length > 0 ? (
+                           u.assignedProjects.map((cp: string) => (
+                             <Badge key={cp} variant="outline" className="text-[10px] bg-background/50 border-border/80 px-1.5 py-0">{cp}</Badge>
+                           ))
+                        ) : (
+                           <span className="text-muted-foreground text-xs italic">Chưa gán dự án</span>
+                        )}
+                      </div>
+                      <div className="flex gap-1 border rounded-lg p-0.5 bg-background shadow-sm shrink-0">
+                        <Button disabled={isProcessing} variant="ghost" size="icon" className="h-7 w-7 text-blue-600 hover:bg-blue-50" onClick={() => handleOpenEditUser(u)}>
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button disabled={isProcessing} variant="ghost" size="icon" className="h-7 w-7 text-amber-600 hover:bg-amber-50" onClick={() => handleResetPassword(u.id, u.uid)}>
+                          <History className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button disabled={isProcessing} variant="ghost" size="icon" className={`h-7 w-7 ${u.active ? 'text-red-600 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50'}`} onClick={() => toggleUserActive(u.id, u.uid, u.active)}>
+                          {u.active ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
+                        </Button>
+                        {user?.email === 'hoanghuy1kt@gmail.com' && (
+                          <Button disabled={isProcessing} variant="ghost" size="icon" className="h-7 w-7 text-rose-600 hover:bg-rose-50" onClick={() => handleOpenDeleteConfirm(u)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>

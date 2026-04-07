@@ -168,26 +168,26 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Báo Cáo Tháng</h1>
-          <p className="text-muted-foreground">Xem báo cáo chi tiết theo từng mã chi phí</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Báo Cáo Tháng</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-0.5">Xem báo cáo chi tiết theo từng mã chi phí</p>
         </div>
-        <Button variant="outline" onClick={() => window.print()}>
+        <Button variant="outline" onClick={() => window.print()} className="w-full sm:w-auto h-10">
           <Download className="h-4 w-4 mr-2" />
           Xuất PDF
         </Button>
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap gap-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="space-y-1.5 flex flex-col">
-              <label className="text-xs text-muted-foreground">Lọc theo Năm</label>
+      <Card className="rounded-xl sm:rounded-2xl border-border/50 shadow-sm">
+        <CardContent className="p-4 sm:pt-6">
+          <div className="flex flex-col w-full gap-3 sm:flex-row sm:items-end">
+          <div className="grid grid-cols-2 xs:grid-cols-3 sm:flex sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+            <div className="space-y-1 sm:space-y-1.5 flex flex-col">
+              <label className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">Lọc Năm</label>
               <Select value={reportsFilter.year} onValueChange={(v: any) => setReportsFilter(p => ({...p, year: v}))}>
-                <SelectTrigger className="w-[120px] h-10 bg-background shadow-sm border-border/80">
+                <SelectTrigger className="w-full sm:w-[110px] h-9 sm:h-10 bg-background shadow-sm border-border/80 rounded-lg text-sm">
                   <SelectValue placeholder="Chọn Năm" />
                 </SelectTrigger>
                 <SelectContent>
@@ -199,10 +199,10 @@ export default function ReportsPage() {
               </Select>
             </div>
 
-            <div className="space-y-1.5 flex flex-col">
-              <label className="text-xs text-muted-foreground">Lọc theo Quý</label>
+            <div className="space-y-1 sm:space-y-1.5 flex flex-col">
+              <label className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">Lọc Quý</label>
               <Select value={reportsFilter.quarter} onValueChange={(v: any) => setReportsFilter(p => ({...p, quarter: v}))}>
-                <SelectTrigger className="w-[120px] h-10 bg-background shadow-sm border-border/80">
+                <SelectTrigger className="w-full sm:w-[110px] h-9 sm:h-10 bg-background shadow-sm border-border/80 rounded-lg text-sm">
                   <SelectValue placeholder="Chọn Quý" />
                 </SelectTrigger>
                 <SelectContent>
@@ -215,10 +215,10 @@ export default function ReportsPage() {
               </Select>
             </div>
 
-            <div className="space-y-1.5 flex flex-col">
-              <label className="text-xs text-muted-foreground">Lọc theo Tháng</label>
+            <div className="space-y-1 sm:space-y-1.5 flex flex-col col-span-2 xs:col-span-1 sm:col-span-1">
+              <label className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">Lọc Tháng</label>
               <Select value={reportsFilter.month} onValueChange={(v: any) => setReportsFilter(p => ({...p, month: v}))}>
-                <SelectTrigger className="w-[130px] h-10 bg-background shadow-sm border-border/80">
+                <SelectTrigger className="w-full sm:w-[120px] h-9 sm:h-10 bg-background shadow-sm border-border/80 rounded-lg text-sm">
                   <SelectValue placeholder="Chọn Tháng" />
                 </SelectTrigger>
                 <SelectContent>
@@ -231,11 +231,11 @@ export default function ReportsPage() {
             </div>
           </div>
             
-            <div className="space-y-1 flex flex-col">
-              <label className="text-xs text-muted-foreground">Dự án ({filterProjects.length === 0 ? 'Tất cả' : filterProjects.length})</label>
+            <div className="space-y-1 sm:space-y-1.5 flex flex-col w-full sm:w-auto mt-0.5 sm:mt-0">
+              <label className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">Dự án ({filterProjects.length === 0 ? 'Tất cả' : filterProjects.length})</label>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-10 w-[240px] justify-between font-normal rounded-lg border-border/80 bg-background shadow-sm hover:bg-background">
+                  <Button variant="outline" className="h-9 sm:h-10 w-full sm:w-[240px] justify-between font-normal rounded-lg border-border/80 bg-background shadow-sm hover:bg-background text-sm">
                     <span className="truncate">
                        {filterProjects.length === 0 ? 'Tất cả dự án' : filterProjects.length === 1 ? filterProjects[0] : `${filterProjects.length} dự án được chọn`}
                     </span>
@@ -286,33 +286,33 @@ export default function ReportsPage() {
       </Card>
 
       {/* Report Summary */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng Thu</CardTitle>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+        <Card className="rounded-xl sm:rounded-2xl border-border/50 shadow-sm">
+          <CardHeader className="pb-1.5 sm:pb-2 pt-4 px-4 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Tổng Thu</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+          <CardContent className="px-4 pb-4 sm:p-6 sm:pt-0">
+            <div className="text-lg sm:text-2xl font-bold text-green-600 truncate">
               {formatCurrency(report.totalIncome)}
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Tổng Chi</CardTitle>
+        <Card className="rounded-xl sm:rounded-2xl border-border/50 shadow-sm">
+          <CardHeader className="pb-1.5 sm:pb-2 pt-4 px-4 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Tổng Chi</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
+          <CardContent className="px-4 pb-4 sm:p-6 sm:pt-0">
+            <div className="text-lg sm:text-2xl font-bold text-red-600 truncate">
               {formatCurrency(report.totalExpense)}
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Chênh Lệch</CardTitle>
+        <Card className="rounded-xl sm:rounded-2xl border-border/50 shadow-sm col-span-2 md:col-span-1">
+          <CardHeader className="pb-1.5 sm:pb-2 pt-4 px-4 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Chênh Lệch</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${report.balance >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+          <CardContent className="px-4 pb-4 sm:p-6 sm:pt-0">
+            <div className={`text-xl sm:text-2xl font-bold truncate ${report.balance >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
               {formatCurrency(report.balance)}
             </div>
           </CardContent>
@@ -320,18 +320,18 @@ export default function ReportsPage() {
       </div>
 
       {/* Accordion Report */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Báo Cáo Chi Tiết Theo Mã</CardTitle>
+      <Card className="rounded-xl sm:rounded-2xl border-border/50 shadow-sm overflow-hidden">
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="text-base sm:text-lg">Báo Cáo Chi Tiết Theo Mã</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-3 sm:px-6">
           <Accordion type="multiple" className="w-full" defaultValue={['expense']}>
             {/* I. TỔNG THU */}
-            <AccordionItem value="income">
-              <AccordionTrigger className="text-lg font-semibold">
-                <span className="flex items-center gap-2">
+            <AccordionItem value="income" className="border-b border-border/50">
+              <AccordionTrigger className="text-sm sm:text-lg font-bold sm:font-semibold hover:no-underline py-3 sm:py-4">
+                <span className="flex items-center flex-wrap gap-2 text-left">
                   <span className="text-green-600">I. TỔNG THU</span>
-                  <Badge variant="success" className="ml-2">
+                  <Badge variant="success" className="ml-0 sm:ml-2 text-[11px] sm:text-xs">
                     {formatCurrency(report.totalIncome)}
                   </Badge>
                 </span>
@@ -390,11 +390,11 @@ export default function ReportsPage() {
             </AccordionItem>
 
             {/* II. TỔNG CHI THEO MÃ */}
-            <AccordionItem value="expense">
-              <AccordionTrigger className="text-lg font-semibold">
-                <span className="flex items-center gap-2">
+            <AccordionItem value="expense" className="border-b border-border/50">
+              <AccordionTrigger className="text-sm sm:text-lg font-bold sm:font-semibold hover:no-underline py-3 sm:py-4">
+                <span className="flex items-center flex-wrap gap-2 text-left">
                   <span className="text-red-600">II. TỔNG CHI THEO MÃ (A-F)</span>
-                  <Badge variant="destructive" className="ml-2">
+                  <Badge variant="destructive" className="ml-0 sm:ml-2 text-[11px] sm:text-xs">
                     {formatCurrency(report.totalExpense)}
                   </Badge>
                 </span>
@@ -455,11 +455,11 @@ export default function ReportsPage() {
             </AccordionItem>
 
             {/* III. TỔNG CHI TOÀN BỘ */}
-            <AccordionItem value="total">
-              <AccordionTrigger className="text-lg font-semibold">
-                <span className="flex items-center gap-2">
+            <AccordionItem value="total" className="border-b border-border/50">
+              <AccordionTrigger className="text-sm sm:text-lg font-bold sm:font-semibold hover:no-underline py-3 sm:py-4">
+                <span className="flex items-center flex-wrap gap-2 text-left">
                   <span>III. TỔNG CHI TOÀN BỘ</span>
-                  <Badge variant="outline" className="ml-2">
+                  <Badge variant="outline" className="ml-0 sm:ml-2 text-[11px] sm:text-xs">
                     {formatCurrency(report.totalExpense)}
                   </Badge>
                 </span>
@@ -488,13 +488,13 @@ export default function ReportsPage() {
             </AccordionItem>
 
             {/* IV. CHÊNH LỆCH */}
-            <AccordionItem value="balance">
-              <AccordionTrigger className="text-lg font-semibold">
-                <span className="flex items-center gap-2">
+            <AccordionItem value="balance" className="border-b-0">
+              <AccordionTrigger className="text-sm sm:text-lg font-bold sm:font-semibold hover:no-underline py-3 sm:py-4">
+                <span className="flex items-center flex-wrap gap-2 text-left">
                   <span>IV. CHÊNH LỆCH</span>
                   <Badge
                     variant={report.balance >= 0 ? 'success' : 'destructive'}
-                    className="ml-2"
+                    className="ml-0 sm:ml-2 text-[11px] sm:text-xs"
                   >
                     {formatCurrency(report.balance)}
                   </Badge>
