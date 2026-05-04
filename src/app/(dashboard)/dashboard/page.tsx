@@ -89,7 +89,7 @@ function formatYAxisCompact(v: number) {
 }
 
 export default function DashboardPage() {
-  const { projects: globalProjects, transactions: globalTransactions, dashboardFilter, setDashboardFilter } = useAppContext();
+  const { projects: globalProjects, transactions: globalTransactions, dashboardFilter, setDashboardFilter, categoryGroups } = useAppContext();
   const { user } = useAuth();
   const visibleProjects = useMemo(() => {
     return globalProjects.filter(p => {
@@ -147,20 +147,14 @@ export default function DashboardPage() {
 
   const summary = useMemo(() => {
     const forMonth = scopedTx.filter((t) => filterMonths.length === 0 || filterMonths.includes(t.month));
-    const byCategory: Record<CategoryCode, number> = {
-      A: 0,
-      B: 0,
-      C: 0,
-      D: 0,
-      E: 0,
-      F: 0,
-    };
+    const byCategory: Record<string, number> = {};
     let totalIncome = 0;
     let totalExpense = 0;
     forMonth.forEach((t) => {
       totalIncome += t.income || 0;
       totalExpense += t.expense || 0;
       if (t.categoryCode && (t.expense || 0) > 0) {
+        if (!byCategory[t.categoryCode]) byCategory[t.categoryCode] = 0;
         byCategory[t.categoryCode] += t.expense;
       }
     });
@@ -170,12 +164,28 @@ export default function DashboardPage() {
   const balance = summary.totalIncome - summary.totalExpense;
 
   const pieData = useMemo(() => {
-    return CATEGORIES.filter((cat) => (summary.byCategory[cat.code] || 0) > 0).map((cat) => ({
-      name: `${cat.code}. ${cat.name.split(' ')[0]}`,
-      value: summary.byCategory[cat.code] || 0,
-      color: cat.color,
-    }));
-  }, [summary.byCategory]);
+    const allCategoriesMap = new Map<string, any>();
+    visibleProjects.forEach(p => {
+      const group = categoryGroups.find(g => g.id === (p.categoryGroupId || 'DEFAULT'));
+      const cats = group?.categories || CATEGORIES;
+      cats.forEach(c => {
+        if (!allCategoriesMap.has(c.code)) {
+          allCategoriesMap.set(c.code, c);
+        }
+      });
+    });
+
+    return Object.keys(summary.byCategory)
+      .filter((code) => summary.byCategory[code] > 0)
+      .map((code) => {
+        const cat = allCategoriesMap.get(code) || CATEGORIES.find(c => c.code === code) || { code, name: 'Khác', color: '#888888' };
+        return {
+          name: `${cat.code}. ${cat.name.split(' ')[0]}`,
+          value: summary.byCategory[code],
+          color: cat.color,
+        };
+      });
+  }, [summary.byCategory, visibleProjects]);
 
   const totalExpenseForPie = pieData.reduce((s, d) => s + d.value, 0);
 
@@ -474,7 +484,7 @@ export default function DashboardPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="rounded-2xl border-border/40 shadow-sm transition-all hover:shadow-md hover:border-border/80">
           <CardHeader>
-            <CardTitle className="text-lg">Phân Tích Chi Phí Theo Mã (A-F)</CardTitle>
+            <CardTitle className="text-lg">Phân Tích Chi Phí Theo Nhóm Mã</CardTitle>
             <p className="text-sm text-muted-foreground">
               Tháng: {filterMonths.length === 0 ? 'Tất cả' : filterMonths.map(m=>m.replace('-','/')).join(', ')}
             </p>

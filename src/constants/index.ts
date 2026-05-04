@@ -1,4 +1,4 @@
-import { Category, CategoryCode, Project } from '@/types';
+import { Category, CategoryGroup, Project } from '@/types';
 
 export const PROJECTS: Project[] = [];
 
@@ -10,6 +10,13 @@ export const CATEGORIES: Category[] = [
   { code: 'E', name: 'Đầu tư & Tiết kiệm', description: 'Đầu tư, tiết kiệm, tích lũy', color: '#8B5CF6' },
   { code: 'F', name: 'Chi phí khác', description: 'Các chi phí không thuộc A-E', color: '#6B7280' },
 ];
+
+export const DEFAULT_CATEGORY_GROUP: CategoryGroup = {
+  id: 'DEFAULT',
+  name: 'Nhóm Tiêu Chuẩn (A-F)',
+  description: 'Nhóm phân loại cơ bản dành cho đa số dự án',
+  categories: CATEGORIES,
+};
 
 
 export const getProjectByCode = (code: string): Project | undefined => {

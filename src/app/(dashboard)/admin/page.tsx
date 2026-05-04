@@ -22,17 +22,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CATEGORIES } from '@/constants';
-import { Plus, Edit, Trash2, KeyRound, CheckSquare, History, UserX, UserCheck, ShieldCheck, Download, FolderKanban, Users, Eye, EyeOff, FileBarChart, Square } from 'lucide-react';
+import { Plus, Edit, Trash2, KeyRound, CheckSquare, History, UserX, UserCheck, ShieldCheck, Download, FolderKanban, Users, Eye, EyeOff, FileBarChart, Square, Layers, Lock, Unlock, BookOpen } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { addUser, updateUser, addProject, updateProject, deleteProject } from '@/lib/firestore';
+import { addUser, updateUser, addProject, updateProject, deleteProject, addCategoryGroup, updateCategoryGroup, deleteCategoryGroup } from '@/lib/firestore';
 
 import { UserRole } from '@/types';
 
 export default function AdminPage() {
   const { user, isAdmin } = useAuth();
-  const { projects: localProjects, setProjects: setLocalProjects, users: localUsers, setUsers: setLocalUsers } = useAppContext();
+  const { projects: localProjects, setProjects: setLocalProjects, users: localUsers, setUsers: setLocalUsers, categoryGroups } = useAppContext();
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState('users');
   const [userFilter, setUserFilter] = useState('all');
@@ -45,15 +45,19 @@ export default function AdminPage() {
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<any>(null);
   const [deleteConfirmProject, setDeleteConfirmProject] = useState<any>(null);
   
-  // CATEGORY STATES
-  const [selectedProjectCode, setSelectedProjectCode] = useState<string | null>(null);
+  // CATEGORY GROUP STATES
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>('DEFAULT');
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [categoryForm, setCategoryForm] = useState({ code: '', name: '', description: '', color: '#3B82F6', originalCode: '' });
   const [deleteConfirmCategory, setDeleteConfirmCategory] = useState<any>(null);
+
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+  const [groupForm, setGroupForm] = useState({ id: '', name: '', description: '', originalId: '' });
+  const [deleteConfirmGroup, setDeleteConfirmGroup] = useState<any>(null);
   
   // FORM STATES
   const [userForm, setUserForm] = useState({ name: '', email: '', role: 'user' as UserRole, assignedProjects: [] as string[] });
-  const [projectForm, setProjectForm] = useState({ code: '', name: '' });
+  const [projectForm, setProjectForm] = useState({ code: '', name: '', categoryGroupId: 'DEFAULT', isEditing: false });
   const [isProcessing, setIsProcessing] = useState(false);
 
   // ... (useAppContext is already active from top)
@@ -197,19 +201,31 @@ export default function AdminPage() {
   // --- HANDLERS FOR PROJECTS
   const visibleProjects = localProjects.filter(p => showHiddenProjects ? true : !p.isHidden);
 
+  const handleOpenEditProject = (p: any) => {
+    setProjectForm({ code: p.code, name: p.name, categoryGroupId: p.categoryGroupId || 'DEFAULT', isEditing: true });
+    setIsProjectModalOpen(true);
+  };
+
   const handleSaveProject = async () => {
     if (projectForm.code && projectForm.name) {
       try {
-        await addProject({ 
-          code: projectForm.code.toUpperCase(), 
-          name: projectForm.name, 
-          isActive: true, 
-          isHidden: false, 
-          excludeFromReports: false,
-          categories: CATEGORIES
-        });
+        if (projectForm.isEditing) {
+          await updateProject(projectForm.code, { 
+            name: projectForm.name,
+            categoryGroupId: projectForm.categoryGroupId || 'DEFAULT'
+          });
+        } else {
+          await addProject({ 
+            code: projectForm.code.toUpperCase(), 
+            name: projectForm.name, 
+            isActive: true, 
+            isHidden: false, 
+            excludeFromReports: false,
+            categoryGroupId: projectForm.categoryGroupId || 'DEFAULT'
+          });
+        }
         setIsProjectModalOpen(false);
-        setProjectForm({ code: '', name: '' });
+        setProjectForm({ code: '', name: '', categoryGroupId: 'DEFAULT', isEditing: false });
       } catch (e: any) {
         alert("Lỗi thêm dự án: " + e.message);
       }
@@ -237,14 +253,13 @@ export default function AdminPage() {
     }
   };
 
-  const selectedProject = localProjects.find(p => p.code === selectedProjectCode);
+  const selectedGroup = categoryGroups.find(g => g.id === selectedGroupId);
   
   const handleSaveCategory = async () => {
-    if (!selectedProject || !categoryForm.code || !categoryForm.name) return;
+    if (!selectedGroup || !categoryForm.code || !categoryForm.name) return;
     try {
       setIsProcessing(true);
-      const currentCategories = selectedProject.categories || CATEGORIES;
-      let newCategories = [...currentCategories];
+      const newCategories = [...selectedGroup.categories];
       
       if (categoryForm.originalCode) {
         const index = newCategories.findIndex(c => c.code === categoryForm.originalCode);
@@ -253,14 +268,14 @@ export default function AdminPage() {
         }
       } else {
         if (newCategories.some(c => c.code === categoryForm.code)) {
-          alert('Mã danh mục này đã tồn tại trong dự án!');
+          alert('Mã danh mục này đã tồn tại trong nhóm!');
           setIsProcessing(false);
           return;
         }
         newCategories.push({ code: categoryForm.code, name: categoryForm.name, description: categoryForm.description, color: categoryForm.color });
       }
       
-      await updateProject(selectedProject.code, { categories: newCategories });
+      await updateCategoryGroup(selectedGroup.id, { categories: newCategories });
       setIsCategoryModalOpen(false);
     } catch (e: any) {
       alert("Lỗi lưu danh mục: " + e.message);
@@ -270,15 +285,52 @@ export default function AdminPage() {
   };
 
   const executeDeleteCategory = async () => {
-    if (!selectedProject || !deleteConfirmCategory) return;
+    if (!selectedGroup || !deleteConfirmCategory) return;
     try {
       setIsProcessing(true);
-      const currentCategories = selectedProject.categories || CATEGORIES;
-      const newCategories = currentCategories.filter(c => c.code !== deleteConfirmCategory.code);
-      await updateProject(selectedProject.code, { categories: newCategories });
+      const newCategories = selectedGroup.categories.filter(c => c.code !== deleteConfirmCategory.code);
+      await updateCategoryGroup(selectedGroup.id, { categories: newCategories });
       setDeleteConfirmCategory(null);
     } catch (e: any) {
       alert("Lỗi xóa danh mục: " + e.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSaveGroup = async () => {
+    if (!groupForm.id || !groupForm.name) return;
+    try {
+      setIsProcessing(true);
+      if (groupForm.originalId) {
+        await updateCategoryGroup(groupForm.originalId, { name: groupForm.name, description: groupForm.description });
+      } else {
+        if (categoryGroups.some(g => g.id === groupForm.id)) {
+           alert('Mã nhóm đã tồn tại!'); return;
+        }
+        await addCategoryGroup({
+          id: groupForm.id.toUpperCase(),
+          name: groupForm.name,
+          description: groupForm.description,
+          categories: CATEGORIES
+        });
+      }
+      setIsGroupModalOpen(false);
+    } catch (e: any) {
+      alert("Lỗi lưu nhóm: " + e.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const executeDeleteGroup = async () => {
+    if (!deleteConfirmGroup) return;
+    try {
+      setIsProcessing(true);
+      await deleteCategoryGroup(deleteConfirmGroup.id);
+      setDeleteConfirmGroup(null);
+    } catch (e: any) {
+      alert("Lỗi xóa nhóm: " + e.message);
     } finally {
       setIsProcessing(false);
     }
@@ -304,18 +356,30 @@ export default function AdminPage() {
       </div>
 
       <div className="w-full">
-        <div className="grid w-full grid-cols-2 mb-6 p-1 bg-muted/60 rounded-xl">
+        <div className="grid w-full grid-cols-4 mb-6 p-1 bg-muted/60 rounded-xl overflow-x-auto min-w-max">
           <button 
             onClick={() => setActiveTab('users')}
-            className={`flex items-center justify-center gap-2 py-3 text-sm font-medium rounded-lg transition-all ${activeTab === 'users' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-background/50'}`}
+            className={`flex items-center justify-center gap-2 py-3 px-2 text-sm font-medium rounded-lg transition-all ${activeTab === 'users' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-background/50'}`}
           >
             <Users className="h-4 w-4" /> <span className="hidden sm:inline">Tài khoản & Phân quyền</span>
           </button>
           <button 
             onClick={() => setActiveTab('projects')}
-            className={`flex items-center justify-center gap-2 py-3 text-sm font-medium rounded-lg transition-all ${activeTab === 'projects' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-background/50'}`}
+            className={`flex items-center justify-center gap-2 py-3 px-2 text-sm font-medium rounded-lg transition-all ${activeTab === 'projects' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-background/50'}`}
           >
-            <FolderKanban className="h-4 w-4" /> <span className="hidden sm:inline">Dự án & Danh mục</span>
+            <FolderKanban className="h-4 w-4" /> <span className="hidden sm:inline">Quản lý Dự án</span>
+          </button>
+          <button 
+            onClick={() => setActiveTab('categories')}
+            className={`flex items-center justify-center gap-2 py-3 px-2 text-sm font-medium rounded-lg transition-all ${activeTab === 'categories' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-background/50'}`}
+          >
+            <Layers className="h-4 w-4" /> <span className="hidden sm:inline">Nhóm Phân Loại</span>
+          </button>
+          <button 
+            onClick={() => setActiveTab('guide')}
+            className={`flex items-center justify-center gap-2 py-3 px-2 text-sm font-medium rounded-lg transition-all ${activeTab === 'guide' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-background/50'}`}
+          >
+            <BookOpen className="h-4 w-4" /> <span className="hidden sm:inline">Hướng dẫn Sử dụng</span>
           </button>
         </div>
         
@@ -468,7 +532,7 @@ export default function AdminPage() {
         {activeTab === 'projects' && (
         <div className="space-y-6 animate-in fade-in-50 zoom-in-95 duration-300">
           <div className="grid gap-6 lg:grid-cols-12">
-            <Card className="col-span-7 border-border/60 shadow-sm flex flex-col min-h-[600px]">
+            <Card className="col-span-12 border-border/60 shadow-sm flex flex-col min-h-[600px]">
               <CardHeader className="bg-muted/10 border-b border-border/40 flex flex-col sm:flex-row sm:items-center justify-between py-3 sm:py-4 gap-3 sm:gap-4">
                 <div className="space-y-0.5">
                   <CardTitle className="text-lg">Tùy biến Mã Dự án</CardTitle>
@@ -484,70 +548,166 @@ export default function AdminPage() {
                 </Button>
               </CardHeader>
               <CardContent className="flex-1 p-0 flex flex-col">
-                <div className="flex-1 overflow-y-auto w-full p-4 space-y-3">
+                <div className="flex-1 overflow-y-auto w-full p-4 flex flex-col gap-3">
                   {visibleProjects.length === 0 && (
                      <div className="text-center py-6 text-muted-foreground italic">Không có dự án nào hiển thị.</div>
                   )}
                   {visibleProjects.map(p => (
                     <div 
                       key={p.code} 
-                      className={`flex items-center justify-between p-4 border rounded-xl shadow-sm transition-colors cursor-pointer ${p.isActive ? 'bg-card border-border/60 hover:bg-muted/10' : 'bg-muted/30 border-dashed border-border/40 opacity-80'} ${p.code === selectedProjectCode ? 'border-primary ring-1 ring-primary' : ''}`}
-                      onClick={() => setSelectedProjectCode(p.code)}
+                      className={`flex flex-col md:flex-row md:items-center justify-between border rounded-xl md:rounded-lg shadow-sm transition-colors overflow-hidden ${p.isActive ? 'bg-card border-border/60 hover:shadow-md' : 'bg-muted/30 border-dashed border-border/40 opacity-80'}`}
                     >
-                      <div className="flex items-center gap-4">
-                        <div className={`w-11 h-11 rounded-lg flex items-center justify-center font-bold text-lg ${p.isActive ? 'bg-primary/10 text-primary' : 'bg-gray-200 text-gray-500'}`}>
-                          {p.code.replace('DA', '')}
-                        </div>
-                        <div>
-                          <div className={`font-bold flex items-center gap-2 ${!p.isActive && 'line-through text-muted-foreground'}`}>
-                            {p.code}
-                            {!p.isActive && <Badge variant="secondary" className="text-[10px] h-5 py-0">Đã chốt (Inactive)</Badge>}
+                      <div className="p-4 md:p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 md:flex-1 min-w-0">
+                        <div className="flex items-center gap-3 md:gap-4 w-full">
+                          <div className={`w-11 h-11 md:w-10 md:h-10 rounded-xl flex shrink-0 items-center justify-center font-bold text-base md:text-sm shadow-sm border ${p.isActive ? 'bg-primary/10 text-primary border-primary/20' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                            {p.code.replace('DA', '')}
                           </div>
-                          <div className="text-sm text-muted-foreground">{p.name}</div>
+                          <div className="flex-1 flex flex-col md:flex-row md:items-center min-w-0">
+                            <div className="flex items-center gap-2 mb-1 md:mb-0 md:w-[250px] lg:w-[350px]">
+                              <h3 className={`font-bold text-base md:text-sm truncate ${!p.isActive && 'line-through text-muted-foreground'}`}>
+                                {p.code} - {p.name}
+                              </h3>
+                              {!p.isActive && <Badge variant="secondary" className="text-[10px] h-4 px-1 py-0 font-medium shrink-0">Bảo lưu</Badge>}
+                            </div>
+                            <div className="flex items-center text-xs text-muted-foreground gap-1.5 flex-1 min-w-0">
+                               <Layers className="h-3.5 w-3.5 shrink-0 text-primary/70" />
+                               <span className="md:hidden">Nhóm phân bổ: </span>
+                               <span className="font-semibold text-foreground bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10 truncate max-w-[150px] md:max-w-[200px]">
+                                 {categoryGroups.find(g => g.id === (p.categoryGroupId || 'DEFAULT'))?.name || 'Tiêu Chuẩn'}
+                               </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-2 opacity-50 hover:opacity-100 transition-opacity">
-                        <Button 
-                           variant="outline" 
-                           size="sm" 
-                           className={`h-8 px-2 flex gap-1 ${!p.isActive ? 'bg-muted/50 text-gray-500 border-gray-200' : 'text-blue-600 border-blue-200'}`}
-                           onClick={() => toggleProjectConfig(p.code, 'isActive', p.isActive ?? false)}
-                           title="Đổi trạng thái Hoạt động / Vô hiệu hóa (cấm thêm dữ liệu)"
-                        >
-                           <ShieldCheck className="h-3.5 w-3.5" />
-                           <span className="hidden xl:inline text-xs">{p.isActive ? 'Active' : 'Inactive'}</span>
-                        </Button>
-                        <Button 
-                           variant="outline" 
-                           size="sm" 
-                           className={`h-8 px-2 flex gap-1 ${p.excludeFromReports ? 'bg-red-50 text-red-600 border-red-200' : 'text-muted-foreground border-border'}`}
-                           onClick={() => toggleProjectConfig(p.code, 'excludeFromReports', p.excludeFromReports ?? false)}
-                           title="Xóa luồng dữ liệu khỏi Report (Báo cáo)"
-                        >
-                           <FileBarChart className="h-3.5 w-3.5" />
-                           <span className="hidden xl:inline text-xs">{p.excludeFromReports ? 'Đã Exclude' : 'Báo cáo'}</span>
-                        </Button>
-                        <Button 
-                           variant="outline" 
-                           size="sm" 
-                           className={`h-8 px-2 flex gap-1 text-muted-foreground`}
-                           onClick={() => toggleProjectConfig(p.code, 'isHidden', p.isHidden ?? false)}
-                           title="Gọn màn hình - Ẩn khỏi list"
-                        >
-                           {p.isHidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                        </Button>
-                        {isAdmin && (
-                          <Button 
-                             disabled={isProcessing}
+                      <div className="bg-muted/30 md:bg-transparent border-t md:border-t-0 border-border/40 p-3 px-4 md:p-3 flex items-center justify-between md:justify-end gap-2 md:gap-2 w-full md:w-auto">
+                         <div className="flex items-center gap-1.5 md:gap-1">
+                           <Button 
                              variant="outline" 
                              size="sm" 
-                             className="h-8 px-2 flex gap-1 text-rose-600 border-rose-200 hover:bg-rose-50"
-                             onClick={() => setDeleteConfirmProject(p)}
-                             title="Xóa vĩnh viễn dự án"
+                             className={`h-8 w-8 md:w-auto md:px-2.5 rounded-lg flex items-center justify-center gap-1.5 text-xs font-medium border-dashed ${!p.isActive ? 'bg-muted text-muted-foreground border-border' : 'text-blue-600 border-blue-200 hover:bg-blue-50'}`}
+                             onClick={() => toggleProjectConfig(p.code, 'isActive', p.isActive ?? false)}
+                             title="Hoạt động / Tạm dừng"
+                           >
+                              {p.isActive ? <Unlock className="h-3.5 w-3.5 shrink-0" /> : <Lock className="h-3.5 w-3.5 shrink-0" />}
+                              <span className="hidden md:inline">{p.isActive ? 'Đang mở' : 'Khóa'}</span>
+                           </Button>
+                           <Button 
+                             variant="outline" 
+                             size="sm" 
+                             className={`h-8 w-8 md:w-auto md:px-2.5 rounded-lg flex items-center justify-center gap-1.5 text-xs font-medium border-dashed ${p.excludeFromReports ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100' : 'text-muted-foreground border-border hover:bg-muted'}`}
+                             onClick={() => toggleProjectConfig(p.code, 'excludeFromReports', p.excludeFromReports ?? false)}
+                             title="Đưa vào / Loại khỏi Báo cáo"
+                           >
+                              <FileBarChart className="h-3.5 w-3.5 shrink-0" />
+                              <span className="hidden lg:inline">{p.excludeFromReports ? 'Đã giấu BC' : 'Lên BC'}</span>
+                           </Button>
+                           <Button 
+                             variant="outline" 
+                             size="sm" 
+                             className={`h-8 w-8 p-0 rounded-lg border-dashed text-muted-foreground hover:bg-muted shrink-0`}
+                             onClick={() => toggleProjectConfig(p.code, 'isHidden', p.isHidden ?? false)}
+                             title="Ẩn khỏi list"
+                           >
+                              {p.isHidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                           </Button>
+                         </div>
+                         <div className="w-px h-6 bg-border mx-1 hidden md:block"></div>
+                         <div className="flex items-center gap-1">
+                          <Button 
+                             disabled={isProcessing}
+                             variant="ghost" 
+                             size="icon" 
+                             className="h-8 w-8 rounded-lg text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-colors shrink-0"
+                             onClick={() => handleOpenEditProject(p)}
+                             title="Chỉnh sửa Dự án"
                           >
-                             <Trash2 className="h-3.5 w-3.5" />
+                             <Edit className="h-4 w-4" />
                           </Button>
+                          {isAdmin && (
+                            <Button 
+                               disabled={isProcessing}
+                               variant="ghost" 
+                               size="icon" 
+                               className="h-8 w-8 rounded-lg text-rose-600 hover:bg-rose-100 hover:text-rose-700 transition-colors shrink-0"
+                               onClick={() => setDeleteConfirmProject(p)}
+                               title="Xóa vĩnh viễn"
+                            >
+                               <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                         </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="p-4 border-t border-border/40 bg-muted/5 mt-auto">
+                    <Button 
+                        className="w-full border-dashed border-2 bg-transparent text-primary hover:bg-primary/5 h-12 rounded-xl"
+                        onClick={() => { setProjectForm({ code: '', name: '', categoryGroupId: 'DEFAULT', isEditing: false }); setIsProjectModalOpen(true); }}
+                    >
+                        + Khởi tạo Dự Án Mới
+                    </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+          </div>
+        </div>
+        )}
+
+        {/* TAB CATEGORY GROUPS */}
+        {activeTab === 'categories' && (
+        <div className="space-y-6 animate-in fade-in-50 zoom-in-95 duration-300">
+          <div className="grid gap-6 lg:grid-cols-12">
+            <Card className="col-span-12 md:col-span-5 border-border/60 shadow-sm flex flex-col min-h-[600px]">
+              <CardHeader className="bg-muted/10 border-b border-border/40 flex flex-col justify-between py-4 gap-3">
+                <div className="space-y-0.5">
+                  <CardTitle className="text-lg">Các Nhóm Phân Loại</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm leading-snug">Quản lý các bộ danh mục dùng chung.</CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent className="flex-1 p-0 flex flex-col">
+                <div className="flex-1 overflow-y-auto w-full p-4 space-y-3">
+                  {categoryGroups.length === 0 && (
+                     <div className="text-center py-6 text-muted-foreground italic">Chưa có nhóm nào.</div>
+                  )}
+                  {categoryGroups.map(g => (
+                    <div 
+                      key={g.id} 
+                      className={`flex flex-col p-4 border rounded-xl shadow-sm transition-colors cursor-pointer ${g.id === selectedGroupId ? 'border-primary ring-1 ring-primary bg-primary/5' : 'bg-card hover:bg-muted/30 border-border/60'}`}
+                      onClick={() => setSelectedGroupId(g.id)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-bold text-base flex items-center gap-2">
+                             {g.name}
+                             {g.id === 'DEFAULT' && <Badge variant="secondary" className="text-[10px]">Mặc định</Badge>}
+                          </div>
+                          <div className="text-sm text-muted-foreground mt-0.5 font-medium">{g.id}</div>
+                          {g.description && <div className="text-xs text-muted-foreground mt-1">{g.description}</div>}
+                        </div>
+                        {g.id !== 'DEFAULT' && isAdmin && (
+                          <div className="flex flex-col gap-1">
+                            <Button 
+                               disabled={isProcessing}
+                               variant="ghost" 
+                               size="icon" 
+                               className="h-7 w-7 text-blue-600 hover:bg-blue-50"
+                               onClick={(e) => { e.stopPropagation(); setGroupForm({ id: g.id, name: g.name, description: g.description || '', originalId: g.id }); setIsGroupModalOpen(true); }}
+                            >
+                               <Edit className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button 
+                               disabled={isProcessing}
+                               variant="ghost" 
+                               size="icon" 
+                               className="h-7 w-7 text-rose-600 hover:bg-rose-50"
+                               onClick={(e) => { e.stopPropagation(); setDeleteConfirmGroup(g); }}
+                            >
+                               <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -556,25 +716,25 @@ export default function AdminPage() {
                 <div className="p-4 border-t border-border/40 bg-muted/5 mt-auto">
                     <Button 
                         className="w-full border-dashed border-2 bg-transparent text-primary hover:bg-primary/5 h-12 rounded-xl"
-                        onClick={() => setIsProjectModalOpen(true)}
+                        onClick={() => { setGroupForm({ id: '', name: '', description: '', originalId: '' }); setIsGroupModalOpen(true); }}
                     >
-                        + Khởi tạo Dự Án Mới
+                        + Khởi tạo Nhóm Mới
                     </Button>
                 </div>
               </CardContent>
             </Card>
-
-            <Card className="col-span-5 border-border/60 shadow-sm flex flex-col min-h-[600px]">
+            
+            <Card className="col-span-12 md:col-span-7 border-border/60 shadow-sm flex flex-col min-h-[600px]">
               <CardHeader className="bg-muted/10 border-b border-border/40 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <CardTitle className="text-lg">
-                    {selectedProject ? `Danh Mục: ${selectedProject.name}` : 'Danh Mục Phân Loại'}
+                    {selectedGroup ? `Mã Danh Mục: ${selectedGroup.name}` : 'Mã Danh Mục'}
                   </CardTitle>
                   <CardDescription>
-                    {selectedProject ? 'Tùy chỉnh nhóm chi phí riêng cho dự án.' : 'Vui lòng chọn một dự án bên trái.'}
+                    {selectedGroup ? 'Tùy chỉnh mã chi phí cho nhóm này.' : 'Vui lòng chọn một nhóm bên trái.'}
                   </CardDescription>
                 </div>
-                {selectedProject && (
+                {selectedGroup && (
                   <Button variant="outline" size="sm" onClick={handleOpenAddCategory}>
                     <Plus className="h-4 w-4 mr-1" /> Thêm Mã
                   </Button>
@@ -582,11 +742,11 @@ export default function AdminPage() {
               </CardHeader>
               <CardContent className="flex-1 p-0">
                 <div className="divide-y divide-border/40 max-h-[550px] overflow-y-auto bg-card">
-                  {!selectedProject ? (
+                  {!selectedGroup ? (
                     <div className="p-8 text-center text-muted-foreground italic">
-                      Vui lòng nhấp chọn một dự án từ danh sách bên trái để xem và sửa danh mục của dự án đó.
+                      Vui lòng nhấp chọn một nhóm từ danh sách bên trái.
                     </div>
-                  ) : (selectedProject.categories || CATEGORIES).map(c => (
+                  ) : (selectedGroup.categories || []).map(c => (
                     <div key={c.code} className="flex items-center gap-4 px-6 py-4 hover:bg-muted/20 transition-colors">
                       <div className="w-5 h-5 rounded-full flex-shrink-0 shadow-sm border border-black/10" style={{ backgroundColor: c.color }} />
                       <div className="flex-1">
@@ -608,6 +768,86 @@ export default function AdminPage() {
               </CardContent>
             </Card>
           </div>
+        </div>
+        )}
+
+        {/* TAB GUIDE */}
+        {activeTab === 'guide' && (
+        <div className="space-y-6 animate-in fade-in-50 zoom-in-95 duration-300">
+          <Card className="border-border/60 shadow-sm">
+            <CardHeader className="bg-muted/10 border-b border-border/40 py-4">
+              <CardTitle className="text-xl">Hướng dẫn Cài đặt & Vận hành</CardTitle>
+              <CardDescription>Giải thích chi tiết về các tính năng và logic quản trị của hệ thống.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-8">
+              
+              <div className="space-y-3">
+                <h3 className="font-semibold text-lg flex items-center gap-2 text-primary">
+                  <FolderKanban className="h-5 w-5" /> 1. Quản lý Dự án & Các trạng thái
+                </h3>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="border rounded-xl p-4 bg-background shadow-sm">
+                    <div className="font-bold flex items-center gap-2 mb-2 text-blue-600">
+                      <Unlock className="h-4 w-4" /> Đang mở (Active)
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Dự án đang trong quá trình hoạt động. Nhân viên có thể chọn dự án này để nhập các khoản thu/chi phát sinh hàng ngày.
+                    </p>
+                  </div>
+                  <div className="border border-dashed rounded-xl p-4 bg-muted/30">
+                    <div className="font-bold flex items-center gap-2 mb-2 text-muted-foreground">
+                      <Lock className="h-4 w-4" /> Khóa (Bảo lưu)
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Dự án đã đóng hoặc tạm dừng. Dự án sẽ bị ẩn khỏi danh sách nhập liệu để tránh nhân viên nhập nhầm, nhưng dữ liệu cũ vẫn tồn tại trên Báo cáo.
+                    </p>
+                  </div>
+                  <div className="border rounded-xl p-4 bg-background shadow-sm">
+                    <div className="font-bold flex items-center gap-2 mb-2 text-rose-600">
+                      <FileBarChart className="h-4 w-4" /> Lên BC / Giấu BC
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Kiểm soát xem tiền của dự án này có được cộng vào Tổng Thu/Chi của công ty hay không. Rất hữu ích khi tạo các dự án "Nháp" hoặc "Nội bộ" không muốn làm lệch báo cáo tài chính thật.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="font-semibold text-lg flex items-center gap-2 text-primary">
+                  <Layers className="h-5 w-5" /> 2. Nhóm Phân Loại (Category Groups)
+                </h3>
+                <div className="text-sm text-muted-foreground space-y-2 bg-muted/20 p-4 rounded-xl border">
+                  <p>Hệ thống cho phép bạn tùy biến các hạng mục thu/chi riêng biệt cho từng dự án.</p>
+                  <ul className="list-disc list-inside space-y-1 ml-1 mt-2">
+                    <li><strong>Bước 1:</strong> Vào tab "Nhóm Phân Loại" để tạo một Nhóm Danh mục (VD: Nhóm Xây dựng, Nhóm Marketing).</li>
+                    <li><strong>Bước 2:</strong> Trong Nhóm đó, thêm các mã chi phí cụ thể (Mã A: Lương, Mã B: Vật tư...).</li>
+                    <li><strong>Bước 3:</strong> Vào tab "Quản lý Dự án", Edit một dự án và gán "Nhóm phân bổ" vừa tạo cho nó.</li>
+                  </ul>
+                  <p className="mt-2 italic">Khi nhân viên nhập liệu cho dự án nào, hệ thống sẽ tự động hiển thị đúng danh sách chi phí của Nhóm đó.</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="font-semibold text-lg flex items-center gap-2 text-primary">
+                  <Users className="h-5 w-5" /> 3. Tài khoản & Phân quyền
+                </h3>
+                <div className="border rounded-xl overflow-hidden text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x border-border">
+                    <div className="p-4 bg-primary/5">
+                      <div className="font-bold text-primary mb-2 flex items-center gap-1.5"><ShieldCheck className="h-4 w-4" /> Quản trị viên (Admin)</div>
+                      <p className="text-muted-foreground">Có toàn quyền kiểm soát hệ thống, thay đổi cài đặt, xóa/sửa giao dịch của bất kỳ ai và xem được tất cả các dự án.</p>
+                    </div>
+                    <div className="p-4 bg-muted/20">
+                      <div className="font-bold text-foreground mb-2 flex items-center gap-1.5"><UserCheck className="h-4 w-4" /> Nhân viên (Thường)</div>
+                      <p className="text-muted-foreground">Chỉ xem và nhập liệu được cho những <strong>Dự án được Admin gán quyền</strong>. Không thể truy cập vào trang Cài đặt Hệ thống hay Báo cáo tài chính tổng hợp.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </CardContent>
+          </Card>
         </div>
         )}
 
@@ -664,16 +904,16 @@ export default function AdminPage() {
           </DialogHeader>
           <div className="grid gap-5 py-2">
             <div className="grid gap-2">
-              <Label htmlFor="name">Họ và tên</Label>
+              <Label htmlFor="name">Họ và tên <span className="text-rose-500">*</span></Label>
               <Input id="name" value={userForm.name} onChange={e => setUserForm({...userForm, name: e.target.value})} placeholder="Nguyễn Văn A" />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="email">Email đăng nhập</Label>
+              <Label htmlFor="email">Email đăng nhập <span className="text-rose-500">*</span></Label>
               <Input id="email" type="email" value={userForm.email} onChange={e => setUserForm({...userForm, email: e.target.value})} placeholder="email@congty.com" />
             </div>
             
             <div className="grid gap-2">
-              <Label>Cấp độ phân quyền</Label>
+              <Label>Cấp độ phân quyền <span className="text-rose-500">*</span></Label>
               <Select value={userForm.role} onValueChange={(v: any) => setUserForm({...userForm, role: v})}>
                 <SelectTrigger className="w-full bg-background">
                   <SelectValue placeholder="Chọn quyền" />
@@ -716,7 +956,7 @@ export default function AdminPage() {
           </div>
           <DialogFooter className="mt-2 border-t pt-4">
             <Button variant="outline" type="button" onClick={() => setIsUserModalOpen(false)}>Hủy bỏ</Button>
-            <Button disabled={isProcessing} onClick={handleSaveUser} type="button" className="bg-primary/95 text-primary-foreground min-w-[120px]">
+            <Button disabled={isProcessing || !userForm.name || !userForm.email || !userForm.role || (userForm.role === 'user' && (!userForm.assignedProjects || userForm.assignedProjects.length === 0))} onClick={handleSaveUser} type="button" className="bg-primary/95 text-primary-foreground min-w-[120px]">
                {isProcessing ? 'Đang xử lý...' : (editingUser ? 'Cập nhật' : 'Tạo mới')}
             </Button>
           </DialogFooter>
@@ -727,24 +967,37 @@ export default function AdminPage() {
       <Dialog open={isProjectModalOpen} onOpenChange={setIsProjectModalOpen}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle>Mở nhanh Dự án mới</DialogTitle>
+            <DialogTitle>{projectForm.isEditing ? 'Sửa thông tin Dự án' : 'Mở nhanh Dự án mới'}</DialogTitle>
             <DialogDescription>
-              Dự án sẽ ở chế độ <Badge variant="outline" className="h-5 px-1 py-0 shadow-none text-[10px]">Active</Badge> lập tức cho mọi giao dịch.
+              {projectForm.isEditing ? 'Cập nhật lại thông tin tên gọi và phân bổ danh mục.' : 'Dự án sẽ ở chế độ Active lập tức cho mọi giao dịch.'}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-5 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="projectCode" className="font-semibold">Mã ID (Quy ước Kế toán)</Label>
-              <Input id="projectCode" value={projectForm.code} onChange={e => setProjectForm({...projectForm, code: e.target.value.toUpperCase()})} placeholder="VD: DA10" className="text-lg uppercase" />
+              <Label htmlFor="projectCode" className="font-semibold">Mã ID (Quy ước Kế toán) <span className="text-rose-500">*</span></Label>
+              <Input id="projectCode" disabled={projectForm.isEditing} value={projectForm.code} onChange={e => setProjectForm({...projectForm, code: e.target.value.toUpperCase()})} placeholder="VD: DA10" className="text-lg uppercase" />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="projectName" className="font-semibold">Tên gọi nội bộ</Label>
+              <Label htmlFor="projectName" className="font-semibold">Tên gọi nội bộ <span className="text-rose-500">*</span></Label>
               <Input id="projectName" value={projectForm.name} onChange={e => setProjectForm({...projectForm, name: e.target.value})} placeholder="Phân khu Nam (Giai đoạn 2)" />
+            </div>
+            <div className="grid gap-2">
+              <Label className="font-semibold">Nhóm Phân Loại <span className="text-rose-500">*</span></Label>
+              <Select value={projectForm.categoryGroupId} onValueChange={(v: any) => setProjectForm({...projectForm, categoryGroupId: v})}>
+                <SelectTrigger className="w-full bg-background">
+                  <SelectValue placeholder="Chọn nhóm" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categoryGroups.map(g => (
+                    <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsProjectModalOpen(false)}>Hủy bỏ</Button>
-            <Button onClick={handleSaveProject} disabled={!projectForm.code || !projectForm.name}>Ghi nhận & Khởi tạo</Button>
+            <Button onClick={handleSaveProject} disabled={!projectForm.code || !projectForm.name || !projectForm.categoryGroupId}>{projectForm.isEditing ? 'Lưu thay đổi' : 'Ghi nhận & Khởi tạo'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -757,11 +1010,11 @@ export default function AdminPage() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label>Mã nhóm (Ví dụ: A, A1)</Label>
+              <Label>Mã nhóm (Ví dụ: A, A1) <span className="text-rose-500">*</span></Label>
               <Input value={categoryForm.code} onChange={e => setCategoryForm({...categoryForm, code: e.target.value.toUpperCase()})} placeholder="Mã..." />
             </div>
             <div className="grid gap-2">
-              <Label>Tên danh mục</Label>
+              <Label>Tên danh mục <span className="text-rose-500">*</span></Label>
               <Input value={categoryForm.name} onChange={e => setCategoryForm({...categoryForm, name: e.target.value})} placeholder="Tên..." />
             </div>
             <div className="grid gap-2">
@@ -769,7 +1022,7 @@ export default function AdminPage() {
               <Input value={categoryForm.description} onChange={e => setCategoryForm({...categoryForm, description: e.target.value})} placeholder="Mô tả..." />
             </div>
             <div className="grid gap-2">
-              <Label>Màu hiển thị</Label>
+              <Label>Màu hiển thị <span className="text-rose-500">*</span></Label>
               <div className="flex gap-2">
                 <Input type="color" value={categoryForm.color} onChange={e => setCategoryForm({...categoryForm, color: e.target.value})} className="w-16 h-10 p-1" />
                 <Input value={categoryForm.color} onChange={e => setCategoryForm({...categoryForm, color: e.target.value})} className="flex-1 uppercase font-mono" />
@@ -778,7 +1031,7 @@ export default function AdminPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCategoryModalOpen(false)}>Hủy</Button>
-            <Button disabled={isProcessing || !categoryForm.code || !categoryForm.name} onClick={handleSaveCategory}>{isProcessing ? 'Đang lưu...' : 'Lưu danh mục'}</Button>
+            <Button disabled={isProcessing || !categoryForm.code || !categoryForm.name || !categoryForm.color} onClick={handleSaveCategory}>{isProcessing ? 'Đang lưu...' : 'Lưu danh mục'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -789,12 +1042,59 @@ export default function AdminPage() {
           <DialogHeader>
             <DialogTitle className="text-rose-600">Xác nhận xóa danh mục</DialogTitle>
             <DialogDescription className="pt-3">
-              Bạn có chắc chắn muốn xóa danh mục <strong>{deleteConfirmCategory?.code} - {deleteConfirmCategory?.name}</strong> khỏi dự án này?
+              Bạn có chắc chắn muốn xóa danh mục <strong>{deleteConfirmCategory?.code} - {deleteConfirmCategory?.name}</strong> khỏi nhóm này?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-4 border-t pt-4">
             <Button variant="outline" onClick={() => setDeleteConfirmCategory(null)}>Hủy bỏ</Button>
             <Button disabled={isProcessing} onClick={executeDeleteCategory} className="bg-rose-600 hover:bg-rose-700 text-white min-w-[120px]">
+               {isProcessing ? 'Đang xử lý...' : 'Đồng ý Xóa'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG THÊM / SỬA CATEGORY GROUP */}
+      <Dialog open={isGroupModalOpen} onOpenChange={setIsGroupModalOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>{groupForm.originalId ? 'Sửa Nhóm Phân Loại' : 'Khởi tạo Nhóm Phân Loại'}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Mã ID Nhóm (VD: GROUP1) <span className="text-rose-500">*</span></Label>
+              <Input value={groupForm.id} onChange={e => setGroupForm({...groupForm, id: e.target.value.toUpperCase()})} placeholder="Mã..." disabled={!!groupForm.originalId} className="uppercase font-mono" />
+            </div>
+            <div className="grid gap-2">
+              <Label>Tên Nhóm <span className="text-rose-500">*</span></Label>
+              <Input value={groupForm.name} onChange={e => setGroupForm({...groupForm, name: e.target.value})} placeholder="VD: Nhóm Marketing..." />
+            </div>
+            <div className="grid gap-2">
+              <Label>Mô tả chi tiết</Label>
+              <Input value={groupForm.description} onChange={e => setGroupForm({...groupForm, description: e.target.value})} placeholder="Mô tả..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsGroupModalOpen(false)}>Hủy</Button>
+            <Button disabled={isProcessing || !groupForm.id || !groupForm.name} onClick={handleSaveGroup}>{isProcessing ? 'Đang lưu...' : 'Lưu Nhóm'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG XÁC NHẬN XÓA CATEGORY GROUP */}
+      <Dialog open={!!deleteConfirmGroup} onOpenChange={(open) => !open && setDeleteConfirmGroup(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="text-rose-600">Xác nhận xóa nhóm phân loại</DialogTitle>
+            <DialogDescription className="pt-3">
+              Bạn có chắc chắn muốn xóa nhóm <strong>{deleteConfirmGroup?.id} - {deleteConfirmGroup?.name}</strong>?
+              <br/><br/>
+              <span className="text-rose-600 font-medium">Cảnh báo: Nếu có dự án đang dùng nhóm này, bạn cần cập nhật lại cho chúng!</span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 border-t pt-4">
+            <Button variant="outline" onClick={() => setDeleteConfirmGroup(null)}>Hủy bỏ</Button>
+            <Button disabled={isProcessing} onClick={executeDeleteGroup} className="bg-rose-600 hover:bg-rose-700 text-white min-w-[120px]">
                {isProcessing ? 'Đang xử lý...' : 'Đồng ý Xóa'}
             </Button>
           </DialogFooter>

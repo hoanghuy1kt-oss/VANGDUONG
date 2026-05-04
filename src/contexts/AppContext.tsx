@@ -1,12 +1,12 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { AppUser, Project, Transaction } from '@/types';
-import { PROJECTS } from '@/constants';
+import { AppUser, Project, Transaction, CategoryGroup } from '@/types';
+import { PROJECTS, DEFAULT_CATEGORY_GROUP } from '@/constants';
 import { DEMO_TRANSACTIONS } from '@/lib/demo-transactions';
 import { Timestamp, collection, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { getFirebaseDb } from '@/lib/firebase';
-import { subscribeToAllTransactions, subscribeToAllProjects, subscribeToAllUsers } from '@/lib/firestore';
+import { subscribeToAllTransactions, subscribeToAllProjects, subscribeToAllUsers, subscribeToAllCategoryGroups } from '@/lib/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Extend models for memory state
@@ -22,6 +22,8 @@ export interface StoreUser extends AppUser {
 interface AppContextType {
   projects: Project[];
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
+  categoryGroups: CategoryGroup[];
+  setCategoryGroups: React.Dispatch<React.SetStateAction<CategoryGroup[]>>;
   users: StoreUser[];
   setUsers: React.Dispatch<React.SetStateAction<StoreUser[]>>;
   transactions: Transaction[];
@@ -72,6 +74,7 @@ const INITIAL_USERS: StoreUser[] = [
 export function AppProvider({ children }: { children: ReactNode }) {
   const { firebaseUser, loading: authLoading } = useAuth();
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
+  const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([DEFAULT_CATEGORY_GROUP]);
   const [users, setUsers] = useState<StoreUser[]>(INITIAL_USERS);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isFirebaseLoaded, setIsFirebaseLoaded] = useState(false);
@@ -123,6 +126,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           // Seed the initial projects directly
           const batch = writeBatch(db);
           INITIAL_PROJECTS.forEach(p => batch.set(doc(collection(db, 'projects'), p.code), p));
+          batch.set(doc(collection(db, 'categoryGroups'), DEFAULT_CATEGORY_GROUP.id), DEFAULT_CATEGORY_GROUP);
           await batch.commit();
         }
       } catch (e) {
@@ -141,6 +145,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const unsubProjs = subscribeToAllProjects((projs) => {
       if (projs.length > 0) setProjects(projs as Project[]);
     });
+    const unsubCatGroups = subscribeToAllCategoryGroups((groups) => {
+      if (groups.length > 0) setCategoryGroups(groups);
+    });
     const unsubUsers = subscribeToAllUsers((usrs) => {
       if (usrs.length > 0) setUsers(usrs as StoreUser[]);
     });
@@ -148,6 +155,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => {
       unsubTxs();
       unsubProjs();
+      unsubCatGroups();
       unsubUsers();
     };
   }, [firebaseUser]);
@@ -155,6 +163,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppContext.Provider value={{ 
       projects, setProjects, 
+      categoryGroups, setCategoryGroups,
       users, setUsers, 
       transactions, setTransactions,
       isFirebaseLoaded,

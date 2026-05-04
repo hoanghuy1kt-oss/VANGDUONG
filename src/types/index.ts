@@ -44,7 +44,14 @@ export interface Project {
   isActive?: boolean;
   isHidden?: boolean;
   excludeFromReports?: boolean;
-  categories?: Category[];
+  categoryGroupId?: string;
+}
+
+export interface CategoryGroup {
+  id: string;
+  name: string;
+  description?: string;
+  categories: Category[];
 }
 
 export interface Category {

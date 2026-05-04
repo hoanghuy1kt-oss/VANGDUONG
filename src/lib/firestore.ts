@@ -18,7 +18,7 @@ import {
   setDoc,
   writeBatch
 } from 'firebase/firestore';
-import { CategoryCode, FilterOptions, Transaction, Project, PeriodLock } from '@/types';
+import { CategoryCode, FilterOptions, Transaction, Project, CategoryGroup, PeriodLock } from '@/types';
 import { getMonthString, getWeekNumber } from '@/constants';
 
 export const getTransactionsRef = () => {
@@ -141,6 +141,40 @@ export const getTransactions = async (filters?: FilterOptions): Promise<Transact
   }
   
   return transactions;
+};
+
+// CategoryGroups
+export const addCategoryGroup = async (data: CategoryGroup): Promise<void> => {
+  const db = getFirebaseDb();
+  if (!db) throw new Error('Firestore is not initialized');
+  await setDoc(doc(db, 'categoryGroups', data.id), data);
+};
+
+export const updateCategoryGroup = async (id: string, data: Partial<CategoryGroup>): Promise<void> => {
+  const db = getFirebaseDb();
+  if (!db) throw new Error('Firestore is not initialized');
+  await updateDoc(doc(db, 'categoryGroups', id), data);
+};
+
+export const deleteCategoryGroup = async (id: string): Promise<void> => {
+  const db = getFirebaseDb();
+  if (!db) throw new Error('Firestore is not initialized');
+  await deleteDoc(doc(db, 'categoryGroups', id));
+};
+
+export const subscribeToAllCategoryGroups = (callback: (groups: CategoryGroup[]) => void) => {
+  const db = getFirebaseDb();
+  if (!db) {
+    callback([]);
+    return () => {};
+  }
+  return onSnapshot(collection(db, 'categoryGroups'), (snapshot) => {
+    const groups: CategoryGroup[] = [];
+    snapshot.forEach((doc) => {
+      groups.push({ ...doc.data(), id: doc.id } as CategoryGroup);
+    });
+    callback(groups);
+  });
 };
 
 // Projects
@@ -358,7 +392,7 @@ export const getDashboardSummary = async (projectCode?: string): Promise<{
   byCategory: Record<CategoryCode, number>;
 }> => {
   const db = getFirebaseDb();
-  if (!db) return { totalIncome: 0, totalExpense: 0, byCategory: { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 } };
+  if (!db) return { totalIncome: 0, totalExpense: 0, byCategory: {} };
   
   const constraints: QueryConstraint[] = [];
   
@@ -371,15 +405,16 @@ export const getDashboardSummary = async (projectCode?: string): Promise<{
   
   let totalIncome = 0;
   let totalExpense = 0;
-  const byCategory: Record<CategoryCode, number> = {
-    A: 0, B: 0, C: 0, D: 0, E: 0, F: 0
-  };
+  const byCategory: Record<CategoryCode, number> = {};
   
   snapshot.docs.forEach(doc => {
     const data = doc.data();
     totalIncome += data.income || 0;
     totalExpense += data.expense || 0;
     if (data.categoryCode && data.expense > 0) {
+      if (!byCategory[data.categoryCode as CategoryCode]) {
+        byCategory[data.categoryCode as CategoryCode] = 0;
+      }
       byCategory[data.categoryCode as CategoryCode] += data.expense;
     }
   });

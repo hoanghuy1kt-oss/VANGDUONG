@@ -41,8 +41,10 @@ export function AddTransactionDialog({ onAddTransaction }: AddTransactionDialogP
   const [isUploading, setIsUploading] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
 
+  const { categoryGroups } = useAppContext();
   const selectedProject = visibleProjects.find(p => p.code === formData.projectCode);
-  const currentCategories = selectedProject?.categories || CATEGORIES;
+  const selectedGroup = categoryGroups.find(g => g.id === (selectedProject?.categoryGroupId || 'DEFAULT'));
+  const currentCategories = selectedGroup?.categories || CATEGORIES;
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;

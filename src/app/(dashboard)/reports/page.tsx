@@ -33,7 +33,7 @@ interface SubCategoryReport {
 }
 
 interface CategoryReport {
-  code: CategoryCode;
+  code: string;
   name: string;
   color: string;
   total: number;
@@ -50,7 +50,7 @@ interface MonthlyReport {
 }
 
 export default function ReportsPage() {
-  const { transactions: globalTransactions, projects: globalProjects, reportsFilter, setReportsFilter } = useAppContext();
+  const { transactions: globalTransactions, projects: globalProjects, reportsFilter, setReportsFilter, categoryGroups } = useAppContext();
   const { user } = useAuth();
   
   const visibleProjects = useMemo(() => {
@@ -105,14 +105,30 @@ export default function ReportsPage() {
     return true;
   });
 
-  const report = buildReport(transactions, filterProjects, filterMonths);
+  const report = buildReport(transactions, filterProjects, filterMonths, visibleProjects, categoryGroups);
 
-  function buildReport(txs: Transaction[], projects: string[], months: string[]): MonthlyReport {
+  function buildReport(txs: Transaction[], projects: string[], months: string[], activeVisibleProjects: any[], groups: any[]): MonthlyReport {
     let totalIncome = 0;
     let totalExpense = 0;
     
-    const categoryMap: Record<CategoryCode, CategoryReport> = {} as any;
-    CATEGORIES.forEach(cat => {
+    const categoryMap: Record<string, CategoryReport> = {};
+    const allCategoriesMap = new Map<string, any>();
+    
+    const relevantProjects = projects.length > 0 
+      ? activeVisibleProjects.filter(p => projects.includes(p.code))
+      : activeVisibleProjects;
+      
+    relevantProjects.forEach(p => {
+      const group = groups.find(g => g.id === (p.categoryGroupId || 'DEFAULT'));
+      const cats = group?.categories || CATEGORIES;
+      cats.forEach(c => {
+        if (!allCategoriesMap.has(c.code)) {
+          allCategoriesMap.set(c.code, c);
+        }
+      });
+    });
+
+    Array.from(allCategoriesMap.values()).forEach(cat => {
       categoryMap[cat.code] = {
         code: cat.code,
         name: cat.name,
@@ -128,23 +144,33 @@ export default function ReportsPage() {
       }
       if (tx.expense > 0) {
         totalExpense += tx.expense;
-        if (categoryMap[tx.categoryCode]) {
-          categoryMap[tx.categoryCode].total += tx.expense;
-          
-          const existingSubCat = categoryMap[tx.categoryCode].subCategories.find(
-            s => s.name === (tx.subCategory || '(Không phân loại)')
-          );
-          
-          if (existingSubCat) {
-            existingSubCat.total += tx.expense;
-            existingSubCat.transactions.push(tx);
-          } else {
-            categoryMap[tx.categoryCode].subCategories.push({
-              name: tx.subCategory || '(Không phân loại)',
-              total: tx.expense,
-              transactions: [tx],
-            });
-          }
+        
+        if (!categoryMap[tx.categoryCode]) {
+           const fallbackCat = CATEGORIES.find(c => c.code === tx.categoryCode) || { code: tx.categoryCode, name: 'Khác', color: '#888' };
+           categoryMap[tx.categoryCode] = {
+              code: fallbackCat.code,
+              name: fallbackCat.name,
+              color: fallbackCat.color,
+              total: 0,
+              subCategories: [],
+           };
+        }
+
+        categoryMap[tx.categoryCode].total += tx.expense;
+        
+        const existingSubCat = categoryMap[tx.categoryCode].subCategories.find(
+          s => s.name === (tx.subCategory || '(Không phân loại)')
+        );
+        
+        if (existingSubCat) {
+          existingSubCat.total += tx.expense;
+          existingSubCat.transactions.push(tx);
+        } else {
+          categoryMap[tx.categoryCode].subCategories.push({
+            name: tx.subCategory || '(Không phân loại)',
+            total: tx.expense,
+            transactions: [tx],
+          });
         }
       }
     });
@@ -393,7 +419,7 @@ export default function ReportsPage() {
             <AccordionItem value="expense" className="border-b border-border/50">
               <AccordionTrigger className="text-sm sm:text-lg font-bold sm:font-semibold hover:no-underline py-3 sm:py-4">
                 <span className="flex items-center flex-wrap gap-2 text-left">
-                  <span className="text-red-600">II. TỔNG CHI THEO MÃ (A-F)</span>
+                  <span className="text-red-600">II. TỔNG CHI THEO NHÓM MÃ</span>
                   <Badge variant="destructive" className="ml-0 sm:ml-2 text-[11px] sm:text-xs">
                     {formatCurrency(report.totalExpense)}
                   </Badge>

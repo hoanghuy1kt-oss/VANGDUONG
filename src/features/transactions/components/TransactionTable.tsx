@@ -15,7 +15,7 @@ interface TransactionTableProps {
 }
 
 export function TransactionTable({ transactions, onToggleLock, onDelete, onViewInvoice }: TransactionTableProps) {
-  const { projects } = useAppContext();
+  const { projects, categoryGroups } = useAppContext();
 
   if (transactions.length === 0) {
     return (
@@ -37,7 +37,8 @@ export function TransactionTable({ transactions, onToggleLock, onDelete, onViewI
       <div className="block lg:hidden space-y-3">
         {transactions.map((tx) => {
           const project = projects.find(p => p.code === tx.projectCode);
-          const category = (project?.categories || CATEGORIES).find((c) => c.code === tx.categoryCode);
+          const group = categoryGroups.find(g => g.id === (project?.categoryGroupId || 'DEFAULT'));
+          const category = (group?.categories || CATEGORIES).find((c) => c.code === tx.categoryCode);
           const projectCode = tx.projectCode || 'CHUNG';
 
           return (
@@ -157,7 +158,8 @@ export function TransactionTable({ transactions, onToggleLock, onDelete, onViewI
             <TableBody>
               {transactions.map((tx) => {
                 const project = projects.find(p => p.code === tx.projectCode);
-                const category = (project?.categories || CATEGORIES).find((c) => c.code === tx.categoryCode);
+                const group = categoryGroups.find(g => g.id === (project?.categoryGroupId || 'DEFAULT'));
+                const category = (group?.categories || CATEGORIES).find((c) => c.code === tx.categoryCode);
                 
                 return (
                   <TableRow key={tx.id} className={`transition-colors hover:bg-muted/30 ${tx.isLocked ? 'opacity-80 bg-muted/20' : ''}`}>

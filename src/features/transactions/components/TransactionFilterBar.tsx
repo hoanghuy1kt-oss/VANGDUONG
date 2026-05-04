@@ -23,8 +23,10 @@ interface TransactionFilterBarProps {
 }
 
 export function TransactionFilterBar({ filters, onChange, onReset }: TransactionFilterBarProps) {
-  const { projects } = useAppContext();
+  const { projects, categoryGroups } = useAppContext();
   const visibleProjects = projects.filter(p => !p.excludeFromReports && !p.isHidden);
+  const allAvailableCategories = Array.from(new Map(categoryGroups.flatMap(g => g.categories || []).map(c => [c.code, c])).values());
+  const catsToRender = allAvailableCategories.length > 0 ? allAvailableCategories : CATEGORIES;
 
   return (
     <div className="bg-card border rounded-lg shadow-sm w-full p-4 mb-4">
@@ -73,7 +75,7 @@ export function TransactionFilterBar({ filters, onChange, onReset }: Transaction
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tất cả mã phí</SelectItem>
-              {CATEGORIES.map((c) => (
+              {catsToRender.map((c) => (
                 <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>
               ))}
             </SelectContent>
