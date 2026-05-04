@@ -1,10 +1,11 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CATEGORIES, getProjectByCode, formatDate } from '@/constants';
+import { CATEGORIES, formatDate } from '@/constants';
 import { Transaction } from '@/types';
 import { Lock, Unlock, Trash2, Image, FileText } from 'lucide-react';
 import { FinanceMath } from '@/lib/finance'; // <-- Dùng FinanceMath
+import { useAppContext } from '@/contexts/AppContext';
 
 interface TransactionTableProps {
   transactions: Transaction[];
@@ -14,6 +15,8 @@ interface TransactionTableProps {
 }
 
 export function TransactionTable({ transactions, onToggleLock, onDelete, onViewInvoice }: TransactionTableProps) {
+  const { projects } = useAppContext();
+
   if (transactions.length === 0) {
     return (
       <div className="text-center py-20 border rounded-xl bg-card border-dashed">
@@ -33,8 +36,8 @@ export function TransactionTable({ transactions, onToggleLock, onDelete, onViewI
       {/* --- GIAO DIỆN MOBILE (Dạng Card) --- */}
       <div className="block lg:hidden space-y-3">
         {transactions.map((tx) => {
-          const category = CATEGORIES.find((c) => c.code === tx.categoryCode);
-          const project = getProjectByCode(tx.projectCode);
+          const project = projects.find(p => p.code === tx.projectCode);
+          const category = (project?.categories || CATEGORIES).find((c) => c.code === tx.categoryCode);
           const projectCode = tx.projectCode || 'CHUNG';
 
           return (
@@ -153,8 +156,8 @@ export function TransactionTable({ transactions, onToggleLock, onDelete, onViewI
             </TableHeader>
             <TableBody>
               {transactions.map((tx) => {
-                const category = CATEGORIES.find((c) => c.code === tx.categoryCode);
-                const project = getProjectByCode(tx.projectCode);
+                const project = projects.find(p => p.code === tx.projectCode);
+                const category = (project?.categories || CATEGORIES).find((c) => c.code === tx.categoryCode);
                 
                 return (
                   <TableRow key={tx.id} className={`transition-colors hover:bg-muted/30 ${tx.isLocked ? 'opacity-80 bg-muted/20' : ''}`}>

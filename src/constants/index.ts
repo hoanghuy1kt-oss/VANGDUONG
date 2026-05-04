@@ -11,18 +11,6 @@ export const CATEGORIES: Category[] = [
   { code: 'F', name: 'Chi phí khác', description: 'Các chi phí không thuộc A-E', color: '#6B7280' },
 ];
 
-export const CATEGORY_MAP: Record<CategoryCode, Category> = {
-  A: CATEGORIES[0],
-  B: CATEGORIES[1],
-  C: CATEGORIES[2],
-  D: CATEGORIES[3],
-  E: CATEGORIES[4],
-  F: CATEGORIES[5],
-};
-
-export const getCategoryByCode = (code: CategoryCode): Category => {
-  return CATEGORY_MAP[code];
-};
 
 export const getProjectByCode = (code: string): Project | undefined => {
   return PROJECTS.find(p => p.code === code);

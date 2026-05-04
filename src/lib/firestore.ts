@@ -52,8 +52,11 @@ export const addTransaction = async (
     dateObj = new Date(dateValue);
   }
   
+  // Loại bỏ id nếu có lẫn vào (do TypeScript type assertion ở nơi gọi)
+  const { id, ...cleanData } = data as any;
+  
   const transactionData = {
-    ...data,
+    ...cleanData,
     month: getMonthString(dateObj),
     weekNumber: getWeekNumber(dateObj),
     isLocked: false,
@@ -90,7 +93,7 @@ export const getTransaction = async (id: string): Promise<Transaction | null> =>
   
   const transactionDoc = await getDoc(doc(db, 'transactions', id));
   if (transactionDoc.exists()) {
-    return { id: transactionDoc.id, ...transactionDoc.data() } as Transaction;
+    return { ...transactionDoc.data(), id: transactionDoc.id } as Transaction;
   }
   return null;
 };
@@ -121,7 +124,7 @@ export const getTransactions = async (filters?: FilterOptions): Promise<Transact
   const q = query(transactionsRef, ...constraints);
   const snapshot = await getDocs(q);
   
-  let transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+  let transactions = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Transaction));
   
   if (filters?.startDate) {
     transactions = transactions.filter(t => {
@@ -218,7 +221,7 @@ export const subscribeToTransactions = (
   const q = query(transactionsRef, ...constraints);
   
   return onSnapshot(q, (snapshot) => {
-    const transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+    const transactions = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Transaction));
     callback(transactions);
   });
 };
@@ -228,7 +231,7 @@ export const subscribeToAllTransactions = (callback: (transactions: Transaction[
   if (!db) return () => {};
   const q = query(collection(db, 'transactions'), orderBy('date', 'desc'));
   return onSnapshot(q, (snapshot) => {
-    callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction)));
+    callback(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Transaction)));
   });
 };
 
@@ -236,7 +239,7 @@ export const subscribeToAllProjects = (callback: (projects: any[]) => void) => {
   const db = getFirebaseDb();
   if (!db) return () => {};
   return onSnapshot(collection(db, 'projects'), (snapshot) => {
-    callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    callback(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
   });
 };
 
@@ -244,7 +247,7 @@ export const subscribeToAllUsers = (callback: (users: any[]) => void) => {
   const db = getFirebaseDb();
   if (!db) return () => {};
   return onSnapshot(collection(db, 'users'), (snapshot) => {
-    callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    callback(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
   });
 };
 

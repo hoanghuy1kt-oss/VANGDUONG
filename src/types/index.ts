@@ -11,7 +11,7 @@ export interface AppUser {
   createdAt: Date | Timestamp;
 }
 
-export type CategoryCode = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
+export type CategoryCode = string;
 
 export interface Transaction {
   id: string;
@@ -44,6 +44,7 @@ export interface Project {
   isActive?: boolean;
   isHidden?: boolean;
   excludeFromReports?: boolean;
+  categories?: Category[];
 }
 
 export interface Category {

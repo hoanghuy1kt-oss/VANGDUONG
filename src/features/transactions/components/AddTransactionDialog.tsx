@@ -41,6 +41,9 @@ export function AddTransactionDialog({ onAddTransaction }: AddTransactionDialogP
   const [isUploading, setIsUploading] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
 
+  const selectedProject = visibleProjects.find(p => p.code === formData.projectCode);
+  const currentCategories = selectedProject?.categories || CATEGORIES;
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     
@@ -113,14 +116,13 @@ export function AddTransactionDialog({ onAddTransaction }: AddTransactionDialogP
       const rawAmountStr = String(formData.amount).replace(/\D/g, '');
       const safeAmount = FinanceMath.from(rawAmountStr).toNumber();
       
-      const newTx: Transaction = {
-        id: Date.now().toString(),
+      const newTx: any = {
         date: new Date(formData.date),
         description: formData.description,
         income: formData.type === 'income' ? safeAmount : 0,
         expense: formData.type === 'expense' ? safeAmount : 0,
         projectCode: formData.projectCode || 'DA0',
-        categoryCode: (formData.categoryCode || 'F') as CategoryCode,
+        categoryCode: formData.categoryCode || (currentCategories[0]?.code || ''),
         subCategory: formData.subCategory,
         performedBy: 'demo',
         performedByName: 'Demo Admin',
@@ -216,7 +218,16 @@ export function AddTransactionDialog({ onAddTransaction }: AddTransactionDialogP
             </div>
             <div className="space-y-1 sm:space-y-2">
               <Label htmlFor="project">Dự án áp dụng</Label>
-              <Select value={formData.projectCode} onValueChange={(v) => setFormData({ ...formData, projectCode: v })} required>
+              <Select 
+                value={formData.projectCode} 
+                onValueChange={(v) => {
+                  const p = visibleProjects.find(x => x.code === v);
+                  const newCats = p?.categories || CATEGORIES;
+                  const validCat = newCats.some(c => c.code === formData.categoryCode) ? formData.categoryCode : '';
+                  setFormData({ ...formData, projectCode: v, categoryCode: validCat as any });
+                }} 
+                required
+              >
                 <SelectTrigger className="h-10">
                   <SelectValue placeholder="-- Trống --" />
                 </SelectTrigger>
@@ -243,9 +254,9 @@ export function AddTransactionDialog({ onAddTransaction }: AddTransactionDialogP
                   <SelectValue placeholder={formData.type === 'income' ? 'Không áp dụng cho Thu' : 'Chọn danh mục mục chi'} />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((c) => (
+                  {currentCategories.map((c) => (
                     <SelectItem key={c.code} value={c.code}>
-                      <span className="font-semibold text-primary">{c.code}</span> - {c.name}
+                      <span className="font-semibold" style={{ color: c.color }}>{c.code}</span> - {c.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

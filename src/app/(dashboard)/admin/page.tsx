@@ -45,6 +45,12 @@ export default function AdminPage() {
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<any>(null);
   const [deleteConfirmProject, setDeleteConfirmProject] = useState<any>(null);
   
+  // CATEGORY STATES
+  const [selectedProjectCode, setSelectedProjectCode] = useState<string | null>(null);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [categoryForm, setCategoryForm] = useState({ code: '', name: '', description: '', color: '#3B82F6', originalCode: '' });
+  const [deleteConfirmCategory, setDeleteConfirmCategory] = useState<any>(null);
+  
   // FORM STATES
   const [userForm, setUserForm] = useState({ name: '', email: '', role: 'user' as UserRole, assignedProjects: [] as string[] });
   const [projectForm, setProjectForm] = useState({ code: '', name: '' });
@@ -199,7 +205,8 @@ export default function AdminPage() {
           name: projectForm.name, 
           isActive: true, 
           isHidden: false, 
-          excludeFromReports: false 
+          excludeFromReports: false,
+          categories: CATEGORIES
         });
         setIsProjectModalOpen(false);
         setProjectForm({ code: '', name: '' });
@@ -228,6 +235,63 @@ export default function AdminPage() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const selectedProject = localProjects.find(p => p.code === selectedProjectCode);
+  
+  const handleSaveCategory = async () => {
+    if (!selectedProject || !categoryForm.code || !categoryForm.name) return;
+    try {
+      setIsProcessing(true);
+      const currentCategories = selectedProject.categories || CATEGORIES;
+      let newCategories = [...currentCategories];
+      
+      if (categoryForm.originalCode) {
+        const index = newCategories.findIndex(c => c.code === categoryForm.originalCode);
+        if (index >= 0) {
+          newCategories[index] = { ...newCategories[index], code: categoryForm.code, name: categoryForm.name, description: categoryForm.description, color: categoryForm.color };
+        }
+      } else {
+        if (newCategories.some(c => c.code === categoryForm.code)) {
+          alert('Mã danh mục này đã tồn tại trong dự án!');
+          setIsProcessing(false);
+          return;
+        }
+        newCategories.push({ code: categoryForm.code, name: categoryForm.name, description: categoryForm.description, color: categoryForm.color });
+      }
+      
+      await updateProject(selectedProject.code, { categories: newCategories });
+      setIsCategoryModalOpen(false);
+    } catch (e: any) {
+      alert("Lỗi lưu danh mục: " + e.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const executeDeleteCategory = async () => {
+    if (!selectedProject || !deleteConfirmCategory) return;
+    try {
+      setIsProcessing(true);
+      const currentCategories = selectedProject.categories || CATEGORIES;
+      const newCategories = currentCategories.filter(c => c.code !== deleteConfirmCategory.code);
+      await updateProject(selectedProject.code, { categories: newCategories });
+      setDeleteConfirmCategory(null);
+    } catch (e: any) {
+      alert("Lỗi xóa danh mục: " + e.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  
+  const handleOpenEditCategory = (cat: any) => {
+    setCategoryForm({ ...cat, originalCode: cat.code });
+    setIsCategoryModalOpen(true);
+  };
+  
+  const handleOpenAddCategory = () => {
+    setCategoryForm({ code: '', name: '', description: '', color: '#3B82F6', originalCode: '' });
+    setIsCategoryModalOpen(true);
   };
 
   return (
@@ -425,7 +489,11 @@ export default function AdminPage() {
                      <div className="text-center py-6 text-muted-foreground italic">Không có dự án nào hiển thị.</div>
                   )}
                   {visibleProjects.map(p => (
-                    <div key={p.code} className={`flex items-center justify-between p-4 border rounded-xl shadow-sm transition-colors ${p.isActive ? 'bg-card border-border/60 hover:bg-muted/10' : 'bg-muted/30 border-dashed border-border/40 opacity-80'}`}>
+                    <div 
+                      key={p.code} 
+                      className={`flex items-center justify-between p-4 border rounded-xl shadow-sm transition-colors cursor-pointer ${p.isActive ? 'bg-card border-border/60 hover:bg-muted/10' : 'bg-muted/30 border-dashed border-border/40 opacity-80'} ${p.code === selectedProjectCode ? 'border-primary ring-1 ring-primary' : ''}`}
+                      onClick={() => setSelectedProjectCode(p.code)}
+                    >
                       <div className="flex items-center gap-4">
                         <div className={`w-11 h-11 rounded-lg flex items-center justify-center font-bold text-lg ${p.isActive ? 'bg-primary/10 text-primary' : 'bg-gray-200 text-gray-500'}`}>
                           {p.code.replace('DA', '')}
@@ -497,18 +565,42 @@ export default function AdminPage() {
             </Card>
 
             <Card className="col-span-5 border-border/60 shadow-sm flex flex-col min-h-[600px]">
-              <CardHeader className="bg-muted/10 border-b border-border/40 py-4">
-                <CardTitle className="text-lg">Danh Mục Phân Loại (Cứng)</CardTitle>
-                <CardDescription>Hệ thống mã A-F chuẩn kế toán quốc tế.</CardDescription>
+              <CardHeader className="bg-muted/10 border-b border-border/40 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-lg">
+                    {selectedProject ? `Danh Mục: ${selectedProject.name}` : 'Danh Mục Phân Loại'}
+                  </CardTitle>
+                  <CardDescription>
+                    {selectedProject ? 'Tùy chỉnh nhóm chi phí riêng cho dự án.' : 'Vui lòng chọn một dự án bên trái.'}
+                  </CardDescription>
+                </div>
+                {selectedProject && (
+                  <Button variant="outline" size="sm" onClick={handleOpenAddCategory}>
+                    <Plus className="h-4 w-4 mr-1" /> Thêm Mã
+                  </Button>
+                )}
               </CardHeader>
               <CardContent className="flex-1 p-0">
                 <div className="divide-y divide-border/40 max-h-[550px] overflow-y-auto bg-card">
-                  {CATEGORIES.map(c => (
+                  {!selectedProject ? (
+                    <div className="p-8 text-center text-muted-foreground italic">
+                      Vui lòng nhấp chọn một dự án từ danh sách bên trái để xem và sửa danh mục của dự án đó.
+                    </div>
+                  ) : (selectedProject.categories || CATEGORIES).map(c => (
                     <div key={c.code} className="flex items-center gap-4 px-6 py-4 hover:bg-muted/20 transition-colors">
                       <div className="w-5 h-5 rounded-full flex-shrink-0 shadow-sm border border-black/10" style={{ backgroundColor: c.color }} />
                       <div className="flex-1">
                         <span className="font-bold text-foreground mr-2 text-base">{c.code}.</span> 
                         <span className="text-muted-foreground font-medium">{c.name}</span>
+                        {c.description && <div className="text-xs text-muted-foreground mt-0.5">{c.description}</div>}
+                      </div>
+                      <div className="flex gap-1 opacity-50 hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-50" onClick={() => handleOpenEditCategory(c)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-600 hover:bg-rose-50" onClick={() => setDeleteConfirmCategory(c)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -653,6 +745,58 @@ export default function AdminPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsProjectModalOpen(false)}>Hủy bỏ</Button>
             <Button onClick={handleSaveProject} disabled={!projectForm.code || !projectForm.name}>Ghi nhận & Khởi tạo</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG THÊM / SỬA CATEGORY */}
+      <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>{categoryForm.originalCode ? 'Sửa danh mục' : 'Thêm danh mục mới'}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Mã nhóm (Ví dụ: A, A1)</Label>
+              <Input value={categoryForm.code} onChange={e => setCategoryForm({...categoryForm, code: e.target.value.toUpperCase()})} placeholder="Mã..." />
+            </div>
+            <div className="grid gap-2">
+              <Label>Tên danh mục</Label>
+              <Input value={categoryForm.name} onChange={e => setCategoryForm({...categoryForm, name: e.target.value})} placeholder="Tên..." />
+            </div>
+            <div className="grid gap-2">
+              <Label>Mô tả chi tiết</Label>
+              <Input value={categoryForm.description} onChange={e => setCategoryForm({...categoryForm, description: e.target.value})} placeholder="Mô tả..." />
+            </div>
+            <div className="grid gap-2">
+              <Label>Màu hiển thị</Label>
+              <div className="flex gap-2">
+                <Input type="color" value={categoryForm.color} onChange={e => setCategoryForm({...categoryForm, color: e.target.value})} className="w-16 h-10 p-1" />
+                <Input value={categoryForm.color} onChange={e => setCategoryForm({...categoryForm, color: e.target.value})} className="flex-1 uppercase font-mono" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCategoryModalOpen(false)}>Hủy</Button>
+            <Button disabled={isProcessing || !categoryForm.code || !categoryForm.name} onClick={handleSaveCategory}>{isProcessing ? 'Đang lưu...' : 'Lưu danh mục'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG XÁC NHẬN XÓA CATEGORY */}
+      <Dialog open={!!deleteConfirmCategory} onOpenChange={(open) => !open && setDeleteConfirmCategory(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="text-rose-600">Xác nhận xóa danh mục</DialogTitle>
+            <DialogDescription className="pt-3">
+              Bạn có chắc chắn muốn xóa danh mục <strong>{deleteConfirmCategory?.code} - {deleteConfirmCategory?.name}</strong> khỏi dự án này?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 border-t pt-4">
+            <Button variant="outline" onClick={() => setDeleteConfirmCategory(null)}>Hủy bỏ</Button>
+            <Button disabled={isProcessing} onClick={executeDeleteCategory} className="bg-rose-600 hover:bg-rose-700 text-white min-w-[120px]">
+               {isProcessing ? 'Đang xử lý...' : 'Đồng ý Xóa'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
