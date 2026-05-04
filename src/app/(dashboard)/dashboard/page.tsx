@@ -88,6 +88,61 @@ function formatYAxisCompact(v: number) {
   return String(v);
 }
 
+function FilterDropdown({ 
+  label, 
+  options, 
+  selectedValues, 
+  onSelect, 
+  placeholder,
+  renderLabel
+}: { 
+  label: string; 
+  options: string[]; 
+  selectedValues: string[]; 
+  onSelect: (vals: string[]) => void; 
+  placeholder: string;
+  renderLabel?: (val: string) => string;
+}) {
+  return (
+    <div className="space-y-1 sm:space-y-1.5 flex flex-col">
+      <Label className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        {label} {selectedValues.length > 0 && `(${selectedValues.length})`}
+      </Label>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" className="h-9 sm:h-10 w-full min-w-[110px] justify-between font-normal rounded-lg border-border/80 bg-background shadow-sm hover:bg-background text-sm px-3">
+            <span className="truncate">
+               {selectedValues.length === 0 ? placeholder : selectedValues.length === 1 ? (renderLabel ? renderLabel(selectedValues[0]) : selectedValues[0]) : `${selectedValues.length} mục`}
+            </span>
+            <ChevronDown className="h-4 w-4 opacity-50 ml-1 shrink-0" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-[160px]" align="start">
+          <DropdownMenuCheckboxItem 
+             checked={selectedValues.length === 0} 
+             onCheckedChange={() => onSelect([])}
+          >
+            {placeholder}
+          </DropdownMenuCheckboxItem>
+          {options.map(o => (
+            <DropdownMenuCheckboxItem 
+              key={o}
+              checked={selectedValues.includes(o)}
+              onSelect={(e) => e.preventDefault()}
+              onCheckedChange={(checked) => {
+                const next = checked ? [...selectedValues, o] : selectedValues.filter(x => x !== o);
+                onSelect(next);
+              }}
+            >
+              {renderLabel ? renderLabel(o) : o}
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { projects: globalProjects, transactions: globalTransactions, dashboardFilter, setDashboardFilter, categoryGroups } = useAppContext();
   const { user } = useAuth();
@@ -115,6 +170,33 @@ export default function DashboardPage() {
     }));
   };
 
+  const availableYears = useMemo(() => Array.from(new Set(monthOptions.map(m => {
+    let y = m.split('-')[0];
+    if (y.length === 2) y = '20' + y;
+    if (y.length === 4 && y.startsWith('00')) y = '20' + y.substring(2);
+    return y;
+  }))).sort((a,b) => b.localeCompare(a)), [monthOptions]);
+
+  const availableMonths = useMemo(() => {
+    const months = new Set<string>();
+    monthOptions.forEach(m => {
+      const parts = m.split('-');
+      let y = parts[0];
+      const mm = parts[1];
+      if (y.length === 2) y = '20' + y;
+      if (y.length === 4 && y.startsWith('00')) y = '20' + y.substring(2);
+      
+      if (dashboardFilter.years.length === 0 || dashboardFilter.years.includes(y)) {
+        months.add(mm);
+      }
+    });
+    return Array.from(months).sort();
+  }, [monthOptions, dashboardFilter.years]);
+
+  const availableQuarters = useMemo(() => {
+    return Array.from(new Set(availableMonths.map(mm => Math.ceil(parseInt(mm) / 3).toString()))).sort();
+  }, [availableMonths]);
+
   const activeMonths = useMemo(() => {
     return monthOptions.filter(m => {
       const parts = m.split('-');
@@ -123,15 +205,15 @@ export default function DashboardPage() {
       if (y.length === 2) y = '20' + y;
       if (y.length === 4 && y.startsWith('00')) y = '20' + y.substring(2);
 
-      if (dashboardFilter.year !== 'all' && y !== dashboardFilter.year) return false;
-      if (dashboardFilter.quarter !== 'all') {
+      if (dashboardFilter.years.length > 0 && !dashboardFilter.years.includes(y)) return false;
+      if (dashboardFilter.quarters.length > 0) {
         const q = Math.ceil(parseInt(mm) / 3).toString();
-        if (q !== dashboardFilter.quarter) return false;
+        if (!dashboardFilter.quarters.includes(q)) return false;
       }
-      if (dashboardFilter.month !== 'all' && mm !== dashboardFilter.month) return false;
+      if (dashboardFilter.months.length > 0 && !dashboardFilter.months.includes(mm)) return false;
       return true;
     });
-  }, [dashboardFilter.year, dashboardFilter.quarter, dashboardFilter.month, monthOptions]);
+  }, [dashboardFilter.years, dashboardFilter.quarters, dashboardFilter.months, monthOptions]);
 
   const filterMonths = activeMonths.length === monthOptions.length ? [] : activeMonths;
 
@@ -252,56 +334,29 @@ export default function DashboardPage() {
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="grid grid-cols-2 xs:grid-cols-3 sm:flex sm:flex-row gap-2 sm:gap-3">
-            <div className="space-y-1 sm:space-y-1.5 flex flex-col">
-              <Label className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">Lọc Năm</Label>
-              <Select value={dashboardFilter.year} onValueChange={(v: any) => setDashboardFilter(p => ({...p, year: v}))}>
-                <SelectTrigger className="w-full sm:w-[110px] h-9 sm:h-10 bg-background shadow-sm border-border/80 rounded-lg text-sm">
-                  <SelectValue placeholder="Chọn Năm" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Mọi năm</SelectItem>
-                  {Array.from(new Set(monthOptions.map(m => {
-                    let y = m.split('-')[0];
-                    if (y.length === 2) y = '20' + y;
-                    if (y.length === 4 && y.startsWith('00')) y = '20' + y.substring(2);
-                    return y;
-                  }))).map(y => (
-                    <SelectItem key={y} value={y}>{y}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1 sm:space-y-1.5 flex flex-col">
-              <Label className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">Lọc Quý</Label>
-              <Select value={dashboardFilter.quarter} onValueChange={(v: any) => setDashboardFilter(p => ({...p, quarter: v}))}>
-                <SelectTrigger className="w-full sm:w-[110px] h-9 sm:h-10 bg-background shadow-sm border-border/80 rounded-lg text-sm">
-                  <SelectValue placeholder="Chọn Quý" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Mọi quý</SelectItem>
-                  <SelectItem value="1">Quý 1</SelectItem>
-                  <SelectItem value="2">Quý 2</SelectItem>
-                  <SelectItem value="3">Quý 3</SelectItem>
-                  <SelectItem value="4">Quý 4</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1 sm:space-y-1.5 flex flex-col col-span-2 xs:col-span-1 sm:col-span-1">
-              <Label className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">Lọc Tháng</Label>
-              <Select value={dashboardFilter.month} onValueChange={(v: any) => setDashboardFilter(p => ({...p, month: v}))}>
-                <SelectTrigger className="w-full sm:w-[120px] h-9 sm:h-10 bg-background shadow-sm border-border/80 rounded-lg text-sm">
-                  <SelectValue placeholder="Chọn Tháng" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Mọi tháng</SelectItem>
-                  {Array.from({length: 12}, (_, i) => String(i + 1).padStart(2, '0')).map(m => (
-                    <SelectItem key={m} value={m}>{m}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <FilterDropdown 
+              label="Lọc Năm" 
+              options={availableYears} 
+              selectedValues={dashboardFilter.years} 
+              onSelect={(vals) => setDashboardFilter(p => ({...p, years: vals}))} 
+              placeholder="Mọi năm" 
+            />
+            <FilterDropdown 
+              label="Lọc Quý" 
+              options={availableQuarters} 
+              selectedValues={dashboardFilter.quarters} 
+              onSelect={(vals) => setDashboardFilter(p => ({...p, quarters: vals}))} 
+              placeholder="Mọi quý" 
+              renderLabel={(q) => dashboardFilter.years.length === 1 ? `${dashboardFilter.years[0]} - Q${q}` : `Quý ${q}`}
+            />
+            <FilterDropdown 
+              label="Lọc Tháng" 
+              options={availableMonths} 
+              selectedValues={dashboardFilter.months} 
+              onSelect={(vals) => setDashboardFilter(p => ({...p, months: vals}))} 
+              placeholder="Mọi tháng" 
+              renderLabel={(m) => dashboardFilter.years.length === 1 ? `${dashboardFilter.years[0]} - ${m}` : m}
+            />
           </div>
           <div className="space-y-1 sm:space-y-1.5 flex flex-col w-full sm:w-auto mt-0.5 sm:mt-0">
             <Label className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">Dự án ({filterProjects.length === 0 ? 'Tất cả' : filterProjects.length})</Label>

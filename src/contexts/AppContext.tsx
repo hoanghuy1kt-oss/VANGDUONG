@@ -30,11 +30,11 @@ interface AppContextType {
   setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
   isFirebaseLoaded: boolean;
   
-  dashboardFilter: { year: string; quarter: string; month: string; filterProjects: string[] };
-  setDashboardFilter: React.Dispatch<React.SetStateAction<{ year: string; quarter: string; month: string; filterProjects: string[] }>>;
+  dashboardFilter: { years: string[]; quarters: string[]; months: string[]; filterProjects: string[] };
+  setDashboardFilter: React.Dispatch<React.SetStateAction<{ years: string[]; quarters: string[]; months: string[]; filterProjects: string[] }>>;
   
-  reportsFilter: { year: string; quarter: string; month: string; filterProjects: string[] };
-  setReportsFilter: React.Dispatch<React.SetStateAction<{ year: string; quarter: string; month: string; filterProjects: string[] }>>;
+  reportsFilter: { years: string[]; quarters: string[]; months: string[]; filterProjects: string[] };
+  setReportsFilter: React.Dispatch<React.SetStateAction<{ years: string[]; quarters: string[]; months: string[]; filterProjects: string[] }>>;
   
   transactionFilters: any;
   setTransactionFilters: React.Dispatch<React.SetStateAction<any>>;
@@ -81,8 +81,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Filters State Persistence
   const currentYear = new Date().getFullYear().toString();
-  const [dashboardFilter, setDashboardFilter] = useState({ year: currentYear, quarter: 'all', month: 'all', filterProjects: [] as string[] });
-  const [reportsFilter, setReportsFilter] = useState({ year: currentYear, quarter: 'all', month: 'all', filterProjects: [] as string[] });
+  const [dashboardFilter, setDashboardFilter] = useState({ years: [currentYear], quarters: [] as string[], months: [] as string[], filterProjects: [] as string[] });
+  const [reportsFilter, setReportsFilter] = useState({ years: [currentYear], quarters: [] as string[], months: [] as string[], filterProjects: [] as string[] });
   const [transactionFilters, setTransactionFilters] = useState<any>({
     month: '',
     project: 'all',
