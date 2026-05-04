@@ -117,7 +117,12 @@ export default function DashboardPage() {
 
   const activeMonths = useMemo(() => {
     return monthOptions.filter(m => {
-      const [y, mm] = m.split('-');
+      const parts = m.split('-');
+      let y = parts[0];
+      const mm = parts[1];
+      if (y.length === 2) y = '20' + y;
+      if (y.length === 4 && y.startsWith('00')) y = '20' + y.substring(2);
+
       if (dashboardFilter.year !== 'all' && y !== dashboardFilter.year) return false;
       if (dashboardFilter.quarter !== 'all') {
         const q = Math.ceil(parseInt(mm) / 3).toString();
@@ -255,7 +260,12 @@ export default function DashboardPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Mọi năm</SelectItem>
-                  {Array.from(new Set(monthOptions.map(m => m.split('-')[0]))).map(y => (
+                  {Array.from(new Set(monthOptions.map(m => {
+                    let y = m.split('-')[0];
+                    if (y.length === 2) y = '20' + y;
+                    if (y.length === 4 && y.startsWith('00')) y = '20' + y.substring(2);
+                    return y;
+                  }))).map(y => (
                     <SelectItem key={y} value={y}>{y}</SelectItem>
                   ))}
                 </SelectContent>
@@ -287,7 +297,7 @@ export default function DashboardPage() {
                 <SelectContent>
                   <SelectItem value="all">Mọi tháng</SelectItem>
                   {Array.from({length: 12}, (_, i) => String(i + 1).padStart(2, '0')).map(m => (
-                    <SelectItem key={m} value={m}>Tháng {m}</SelectItem>
+                    <SelectItem key={m} value={m}>{m}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -374,7 +384,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="px-4 pb-4 sm:p-6 sm:pt-0">
             <div className="text-lg sm:text-2xl font-bold tracking-tight text-rose-600 truncate">
-              {formatCurrency(summary.totalExpense)}
+              {summary.totalExpense > 0 ? '-' + formatCurrency(summary.totalExpense) : formatCurrency(0)}
             </div>
           </CardContent>
         </Card>
@@ -537,7 +547,7 @@ export default function DashboardPage() {
                     Tổng chi
                   </span>
                   <span className="text-lg font-bold tabular-nums text-foreground">
-                    {formatCurrency(totalExpenseForPie)}
+                    {totalExpenseForPie > 0 ? '-' + formatCurrency(totalExpenseForPie) : formatCurrency(0)}
                   </span>
                 </div>
               </div>
@@ -649,7 +659,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Tổng Chi:</span>
-                        <span className="font-semibold text-rose-600 tabular-nums">{formatCurrency(chi)}</span>
+                        <span className="font-semibold text-rose-600 tabular-nums">{chi > 0 ? '-' + formatCurrency(chi) : formatCurrency(0)}</span>
                       </div>
                     </div>
                     <div className="mx-auto h-2.5 w-2.5 -mt-1.5 rotate-45 border-r border-b border-border/80 bg-background/95 backdrop-blur"></div>

@@ -23,10 +23,34 @@ interface TransactionFilterBarProps {
 }
 
 export function TransactionFilterBar({ filters, onChange, onReset }: TransactionFilterBarProps) {
-  const { projects, categoryGroups } = useAppContext();
+  const { transactions, projects, categoryGroups } = useAppContext();
   const visibleProjects = projects.filter(p => !p.excludeFromReports && !p.isHidden);
   const allAvailableCategories = Array.from(new Map(categoryGroups.flatMap(g => g.categories || []).map(c => [c.code, c])).values());
-  const catsToRender = allAvailableCategories.length > 0 ? allAvailableCategories : CATEGORIES;
+
+  // Lấy các giá trị có thực trong dữ liệu
+  const monthsWithData = Array.from(new Set(transactions.map(t => t.month))).sort((a, b) => b.localeCompare(a));
+  const projectCodesWithData = new Set(transactions.map(t => t.projectCode));
+  const categoryCodesWithData = new Set(transactions.map(t => t.categoryCode));
+
+  const monthOptions = [...monthsWithData];
+  if (filters.month && filters.month !== 'all' && !monthOptions.includes(filters.month)) {
+    monthOptions.push(filters.month);
+    monthOptions.sort((a, b) => b.localeCompare(a));
+  }
+
+  const projectsToRender = visibleProjects.filter(p => projectCodesWithData.has(p.code));
+  if (filters.project !== 'all' && !projectsToRender.some(p => p.code === filters.project)) {
+    const selectedP = visibleProjects.find(p => p.code === filters.project);
+    if (selectedP) projectsToRender.push(selectedP);
+  }
+
+  let catsToRender = allAvailableCategories.filter(c => categoryCodesWithData.has(c.code));
+  if (catsToRender.length === 0) catsToRender = CATEGORIES.filter(c => categoryCodesWithData.has(c.code));
+  if (filters.category !== 'all' && !catsToRender.some(c => c.code === filters.category)) {
+    const selectedC = allAvailableCategories.find(c => c.code === filters.category) || CATEGORIES.find(c => c.code === filters.category);
+    if (selectedC) catsToRender.push(selectedC);
+  }
+
 
   return (
     <div className="bg-card border rounded-lg shadow-sm w-full p-4 mb-4">
@@ -42,12 +66,22 @@ export function TransactionFilterBar({ filters, onChange, onReset }: Transaction
               className="pl-9 bg-background focus:ring-2" 
             />
           </div>
-          <Input 
-            type="month" 
-            value={filters.month} 
-            onChange={(e) => onChange('month', e.target.value)} 
-            className="w-full sm:w-[160px] bg-background" 
-          />
+          <Select value={filters.month || 'all'} onValueChange={(v) => onChange('month', v)}>
+            <SelectTrigger className="w-full sm:w-[160px] bg-background focus:ring-2">
+              <SelectValue placeholder="Chọn tháng" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả các tháng</SelectItem>
+              {monthOptions.map(m => {
+                const parts = m.split('-');
+                const month = parts[1];
+                let year = parts[0];
+                if (year.length === 2) year = '20' + year;
+                if (year.length === 4 && year.startsWith('00')) year = '20' + year.substring(2);
+                return <SelectItem key={m} value={m}>{month}/{year}</SelectItem>;
+              })}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Hàng 2: Các bộ lọc trạng thái */}
@@ -63,7 +97,7 @@ export function TransactionFilterBar({ filters, onChange, onReset }: Transaction
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Mọi Dự án</SelectItem>
-              {visibleProjects.map((p) => (
+              {projectsToRender.map((p) => (
                 <SelectItem key={p.code} value={p.code}>{p.code}</SelectItem>
               ))}
             </SelectContent>

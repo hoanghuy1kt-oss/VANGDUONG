@@ -7,6 +7,7 @@ import { Transaction } from '@/types';
 import { useAppContext } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { AddTransactionDialog } from '@/features/transactions/components/AddTransactionDialog';
+import { EditTransactionDialog } from '@/features/transactions/components/EditTransactionDialog';
 import { TransactionFilterBar, FilterState } from '@/features/transactions/components/TransactionFilterBar';
 import { TransactionTable } from '@/features/transactions/components/TransactionTable';
 import { addTransaction, deleteTransaction, lockTransaction, unlockTransaction } from '@/lib/firestore';
@@ -31,9 +32,12 @@ export default function TransactionsPage() {
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [selectedInvoices, setSelectedInvoices] = useState<{ url: string; name: string; id: string }[]>([]);
   const [currentInvoiceIdx, setCurrentInvoiceIdx] = useState(0);
+
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   
   // Bộ lọc
-  const filters = transactionFilters.month === '' ? { ...transactionFilters, month: defaultMonth() } : transactionFilters;
+  const filters = (transactionFilters.month === '' && transactionFilters.month !== 'all') ? { ...transactionFilters, month: defaultMonth() } : transactionFilters;
 
   const updateFilter = (key: keyof FilterState, value: string) => {
     setTransactionFilters((prev: any) => ({ ...prev, [key]: value }));
@@ -59,7 +63,7 @@ export default function TransactionsPage() {
     if (!isProjectVisible) return false;
 
     if (filters.project !== 'all' && tx.projectCode !== filters.project) return false;
-    if (filters.month && tx.month !== filters.month) return false;
+    if (filters.month && filters.month !== 'all' && tx.month !== filters.month) return false;
     
     if (filters.description.trim()) {
       const q = filters.description.trim().toLowerCase();
@@ -113,6 +117,11 @@ export default function TransactionsPage() {
     setInvoiceDialogOpen(true);
   };
 
+  const handleEdit = (tx: Transaction) => {
+    setEditingTransaction(tx);
+    setEditDialogOpen(true);
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-500">
       {/* 1. Tiêu đề & Nút Thêm */}
@@ -136,8 +145,18 @@ export default function TransactionsPage() {
         transactions={filteredTransactions} 
         onToggleLock={handleToggleLock}
         onDelete={handleDelete}
+        onEdit={handleEdit}
         onViewInvoice={showInvoice}
       />
+
+      {/* Dialog Sửa Giao Dịch */}
+      {editingTransaction && (
+        <EditTransactionDialog 
+          transaction={editingTransaction} 
+          open={editDialogOpen} 
+          onOpenChange={setEditDialogOpen}
+        />
+      )}
 
       {/* 4. Lightbox Hóa đơn (Chỉ render khi open) */}
       <Dialog open={invoiceDialogOpen} onOpenChange={setInvoiceDialogOpen}>

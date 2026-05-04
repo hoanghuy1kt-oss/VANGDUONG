@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CATEGORIES, formatDate } from '@/constants';
 import { Transaction } from '@/types';
-import { Lock, Unlock, Trash2, Image, FileText } from 'lucide-react';
+import { Lock, Unlock, Trash2, Image, FileText, Edit } from 'lucide-react';
 import { FinanceMath } from '@/lib/finance'; // <-- Dùng FinanceMath
 import { useAppContext } from '@/contexts/AppContext';
 
@@ -11,10 +11,11 @@ interface TransactionTableProps {
   transactions: Transaction[];
   onToggleLock: (id: string) => void;
   onDelete: (id: string) => void;
+  onEdit: (tx: Transaction) => void;
   onViewInvoice: (attachments: { url: string; name: string; id: string }[]) => void;
 }
 
-export function TransactionTable({ transactions, onToggleLock, onDelete, onViewInvoice }: TransactionTableProps) {
+export function TransactionTable({ transactions, onToggleLock, onDelete, onEdit, onViewInvoice }: TransactionTableProps) {
   const { projects, categoryGroups } = useAppContext();
 
   if (transactions.length === 0) {
@@ -80,7 +81,7 @@ export function TransactionTable({ transactions, onToggleLock, onDelete, onViewI
                 </div>
                 <div className="flex flex-col text-right">
                    <span className="text-[10px] text-muted-foreground uppercase font-semibold mb-0.5">Chi (VNĐ)</span>
-                   <span className="text-red-600 font-bold text-sm tracking-tight">{tx.expense > 0 ? FinanceMath.format(tx.expense) : '-'}</span>
+                   <span className="text-red-600 font-bold text-sm tracking-tight">{tx.expense > 0 ? '-' + FinanceMath.format(tx.expense) : '-'}</span>
                 </div>
               </div>
 
@@ -112,9 +113,14 @@ export function TransactionTable({ transactions, onToggleLock, onDelete, onViewI
                     {tx.isLocked ? <Unlock className="h-3.5 w-3.5 text-emerald-600" /> : <Lock className="h-3.5 w-3.5 text-slate-400" />}
                   </Button>
                   {!tx.isLocked && (
-                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-red-50 hover:text-red-600" onClick={() => onDelete(tx.id)}>
-                      <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                    </Button>
+                    <>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-blue-50 hover:text-blue-600" onClick={() => onEdit(tx)}>
+                        <Edit className="h-3.5 w-3.5 text-blue-500" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-red-50 hover:text-red-600" onClick={() => onDelete(tx.id)}>
+                        <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
@@ -131,7 +137,7 @@ export function TransactionTable({ transactions, onToggleLock, onDelete, onViewI
              </div>
              <div className="text-center p-2 bg-background rounded-lg shadow-sm border border-border/50">
                <p className="text-[10px] font-semibold uppercase text-muted-foreground mb-1">TỔNG CHI</p>
-               <p className="text-red-600 font-extrabold text-base">{FinanceMath.format(totalExpense)}</p>
+               <p className="text-red-600 font-extrabold text-base">{totalExpense > 0 ? '-' + FinanceMath.format(totalExpense) : '0'}</p>
              </div>
           </div>
         </div>
@@ -210,7 +216,7 @@ export function TransactionTable({ transactions, onToggleLock, onDelete, onViewI
                     
                     {/* Tiền Chi */}
                     <TableCell className="align-top text-right tabular-nums font-semibold tracking-tight text-red-600">
-                      {tx.expense > 0 ? FinanceMath.format(tx.expense) : '-'}
+                      {tx.expense > 0 ? '-' + FinanceMath.format(tx.expense) : '-'}
                     </TableCell>
                     
                     {/* Status */}
@@ -252,9 +258,14 @@ export function TransactionTable({ transactions, onToggleLock, onDelete, onViewI
                           {tx.isLocked ? <Unlock className="h-4 w-4 text-emerald-600" /> : <Lock className="h-4 w-4 text-slate-400" />}
                         </Button>
                         {!tx.isLocked && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-red-50 hover:text-red-600" onClick={() => onDelete(tx.id)} title="Xóa">
-                            <Trash2 className="h-4 w-4 text-red-400" />
-                          </Button>
+                          <>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600" onClick={() => onEdit(tx)} title="Chỉnh sửa">
+                              <Edit className="h-4 w-4 text-blue-500" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-red-50 hover:text-red-600" onClick={() => onDelete(tx.id)} title="Xóa">
+                              <Trash2 className="h-4 w-4 text-red-400" />
+                            </Button>
+                          </>
                         )}
                       </div>
                     </TableCell>
@@ -273,7 +284,7 @@ export function TransactionTable({ transactions, onToggleLock, onDelete, onViewI
                   {FinanceMath.format(totalIncome)}
                 </TableCell>
                 <TableCell className="text-right text-red-600 font-bold tabular-nums text-base">
-                  {FinanceMath.format(totalExpense)}
+                  {totalExpense > 0 ? '-' + FinanceMath.format(totalExpense) : '0'}
                 </TableCell>
                 <TableCell colSpan={3}></TableCell>
               </TableRow>

@@ -11,7 +11,7 @@ import { CATEGORIES, PROJECTS, formatCurrency, formatDate } from '@/constants';
 import { getDemoMonthOptionsDescending } from '@/lib/demo-transactions';
 import { Transaction, CategoryCode } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { FileText, Lock, Image, Download, ChevronDown } from 'lucide-react';
+import { FileText, Lock, Image, Download, ChevronDown, Edit } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +25,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useAppContext } from '@/contexts/AppContext';
+import { EditTransactionDialog } from '@/features/transactions/components/EditTransactionDialog';
 
 interface SubCategoryReport {
   name: string;
@@ -70,7 +71,12 @@ export default function ReportsPage() {
 
   const activeMonths = useMemo(() => {
     return monthOptions.filter(m => {
-      const [y, mm] = m.split('-');
+      const parts = m.split('-');
+      let y = parts[0];
+      const mm = parts[1];
+      if (y.length === 2) y = '20' + y;
+      if (y.length === 4 && y.startsWith('00')) y = '20' + y.substring(2);
+
       if (reportsFilter.year !== 'all' && y !== reportsFilter.year) return false;
       if (reportsFilter.quarter !== 'all') {
         const q = Math.ceil(parseInt(mm) / 3).toString();
@@ -94,6 +100,9 @@ export default function ReportsPage() {
 
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<{ url: string; name: string } | null>(null);
+
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const transactions = globalTransactions.filter(tx => {
     // Only process visible projects
@@ -190,6 +199,11 @@ export default function ReportsPage() {
     setInvoiceDialogOpen(true);
   };
 
+  const handleEdit = (tx: Transaction) => {
+    setEditingTransaction(tx);
+    setEditDialogOpen(true);
+  };
+
   const filteredCategories = report.categories.filter(cat => cat.total > 0);
 
   return (
@@ -218,7 +232,12 @@ export default function ReportsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Mọi năm</SelectItem>
-                  {Array.from(new Set(monthOptions.map(m => m.split('-')[0]))).map(y => (
+                  {Array.from(new Set(monthOptions.map(m => {
+                    let y = m.split('-')[0];
+                    if (y.length === 2) y = '20' + y;
+                    if (y.length === 4 && y.startsWith('00')) y = '20' + y.substring(2);
+                    return y;
+                  }))).map(y => (
                     <SelectItem key={y} value={y}>{y}</SelectItem>
                   ))}
                 </SelectContent>
@@ -250,7 +269,7 @@ export default function ReportsPage() {
                 <SelectContent>
                   <SelectItem value="all">Mọi tháng</SelectItem>
                   {Array.from({length: 12}, (_, i) => String(i + 1).padStart(2, '0')).map(m => (
-                    <SelectItem key={m} value={m}>Tháng {m}</SelectItem>
+                    <SelectItem key={m} value={m}>{m}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -329,7 +348,7 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent className="px-4 pb-4 sm:p-6 sm:pt-0">
             <div className="text-lg sm:text-2xl font-bold text-red-600 truncate">
-              {formatCurrency(report.totalExpense)}
+              {report.totalExpense > 0 ? '-' + formatCurrency(report.totalExpense) : formatCurrency(0)}
             </div>
           </CardContent>
         </Card>
@@ -398,6 +417,11 @@ export default function ReportsPage() {
                                 </div>
                                 <div className="text-right flex items-center gap-2">
                                   <div className="font-medium text-green-600/90 text-sm">{formatCurrency(tx.income)}</div>
+                                  {!tx.isLocked && (
+                                    <Button variant="ghost" size="sm" onClick={() => handleEdit(tx)}>
+                                      <Edit className="h-4 w-4 text-blue-500" />
+                                    </Button>
+                                  )}
                                   {tx.invoiceUrl && (
                                     <Button variant="ghost" size="sm" onClick={() => viewInvoice(tx.invoiceUrl!, tx.invoiceName || 'invoice')}>
                                       <Image className="h-4 w-4" />
@@ -421,7 +445,7 @@ export default function ReportsPage() {
                 <span className="flex items-center flex-wrap gap-2 text-left">
                   <span className="text-red-600">II. TỔNG CHI THEO NHÓM MÃ</span>
                   <Badge variant="destructive" className="ml-0 sm:ml-2 text-[11px] sm:text-xs">
-                    {formatCurrency(report.totalExpense)}
+                    {report.totalExpense > 0 ? '-' + formatCurrency(report.totalExpense) : formatCurrency(0)}
                   </Badge>
                 </span>
               </AccordionTrigger>
@@ -437,7 +461,7 @@ export default function ReportsPage() {
                           ></div>
                           <span className="font-medium">{cat.code}. {cat.name}</span>
                           <Badge style={{ backgroundColor: cat.color + '20', color: cat.color }}>
-                            {formatCurrency(cat.total)}
+                            {cat.total > 0 ? '-' + formatCurrency(cat.total) : formatCurrency(0)}
                           </Badge>
                         </div>
                       </AccordionTrigger>
@@ -447,7 +471,7 @@ export default function ReportsPage() {
                             <div key={idx} className="border rounded-lg overflow-hidden">
                               <div className="flex items-center justify-between p-3 bg-muted/50">
                                 <span className="font-medium text-sm">{sub.name}</span>
-                                <Badge variant="outline">{formatCurrency(sub.total)}</Badge>
+                                <Badge variant="outline">{sub.total > 0 ? '-' + formatCurrency(sub.total) : formatCurrency(0)}</Badge>
                               </div>
                               <div className="divide-y">
                                 {sub.transactions.map(tx => (
@@ -460,7 +484,12 @@ export default function ReportsPage() {
                                       </div>
                                     </div>
                                     <div className="text-right flex items-center gap-2">
-                                      <div className="font-medium text-red-600">{formatCurrency(tx.expense)}</div>
+                                      <div className="font-medium text-red-600">{tx.expense > 0 ? '-' + formatCurrency(tx.expense) : formatCurrency(0)}</div>
+                                      {!tx.isLocked && (
+                                        <Button variant="ghost" size="sm" onClick={() => handleEdit(tx)}>
+                                          <Edit className="h-4 w-4 text-blue-500" />
+                                        </Button>
+                                      )}
                                       {tx.invoiceUrl && (
                                         <Button variant="ghost" size="sm" onClick={() => viewInvoice(tx.invoiceUrl!, tx.invoiceName || 'invoice')}>
                                           <Image className="h-4 w-4" />
@@ -486,7 +515,7 @@ export default function ReportsPage() {
                 <span className="flex items-center flex-wrap gap-2 text-left">
                   <span>III. TỔNG CHI TOÀN BỘ</span>
                   <Badge variant="outline" className="ml-0 sm:ml-2 text-[11px] sm:text-xs">
-                    {formatCurrency(report.totalExpense)}
+                    {report.totalExpense > 0 ? '-' + formatCurrency(report.totalExpense) : formatCurrency(0)}
                   </Badge>
                 </span>
               </AccordionTrigger>
@@ -505,7 +534,7 @@ export default function ReportsPage() {
                         ></div>
                         <span className="font-medium">{cat.code}</span>
                       </div>
-                      <div className="text-xl font-bold">{formatCurrency(cat.total)}</div>
+                      <div className="text-xl font-bold">{cat.total > 0 ? '-' + formatCurrency(cat.total) : formatCurrency(0)}</div>
                       <div className="text-sm text-muted-foreground">{cat.name}</div>
                     </div>
                   ))}
@@ -542,6 +571,15 @@ export default function ReportsPage() {
           </Accordion>
         </CardContent>
       </Card>
+
+      {/* Dialog Sửa Giao Dịch */}
+      {editingTransaction && (
+        <EditTransactionDialog 
+          transaction={editingTransaction} 
+          open={editDialogOpen} 
+          onOpenChange={setEditDialogOpen}
+        />
+      )}
 
       {/* Invoice Lightbox */}
       <Dialog open={invoiceDialogOpen} onOpenChange={setInvoiceDialogOpen}>
