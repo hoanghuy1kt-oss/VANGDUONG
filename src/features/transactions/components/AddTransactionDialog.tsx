@@ -224,7 +224,8 @@ export function AddTransactionDialog({ onAddTransaction }: AddTransactionDialogP
                 value={formData.projectCode} 
                 onValueChange={(v) => {
                   const p = visibleProjects.find(x => x.code === v);
-                  const newCats = p?.categories || CATEGORIES;
+                  const group = categoryGroups.find(g => g.id === (p?.categoryGroupId || 'DEFAULT'));
+                  const newCats = group?.categories || CATEGORIES;
                   const validCat = newCats.some(c => c.code === formData.categoryCode) ? formData.categoryCode : '';
                   setFormData({ ...formData, projectCode: v, categoryCode: validCat as any });
                 }} 

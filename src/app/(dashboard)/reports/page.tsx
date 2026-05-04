@@ -121,7 +121,7 @@ export default function ReportsPage() {
     relevantProjects.forEach(p => {
       const group = groups.find(g => g.id === (p.categoryGroupId || 'DEFAULT'));
       const cats = group?.categories || CATEGORIES;
-      cats.forEach(c => {
+      cats.forEach((c: any) => {
         if (!allCategoriesMap.has(c.code)) {
           allCategoriesMap.set(c.code, c);
         }
