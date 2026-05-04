@@ -117,7 +117,7 @@ function FilterDropdown({
             <ChevronDown className="h-4 w-4 opacity-50 ml-1 shrink-0" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-[160px]" align="start">
+        <DropdownMenuContent className="w-[200px] max-h-[300px] overflow-y-auto" align="start">
           <DropdownMenuCheckboxItem 
              checked={selectedValues.length === 0} 
              onCheckedChange={() => onSelect([])}
@@ -125,17 +125,30 @@ function FilterDropdown({
             {placeholder}
           </DropdownMenuCheckboxItem>
           {options.map(o => (
-            <DropdownMenuCheckboxItem 
-              key={o}
-              checked={selectedValues.includes(o)}
-              onSelect={(e) => e.preventDefault()}
-              onCheckedChange={(checked) => {
-                const next = checked ? [...selectedValues, o] : selectedValues.filter(x => x !== o);
-                onSelect(next);
-              }}
-            >
-              {renderLabel ? renderLabel(o) : o}
-            </DropdownMenuCheckboxItem>
+            <div key={o} className="relative flex items-center group">
+              <DropdownMenuCheckboxItem 
+                className="flex-1 pr-16 cursor-pointer overflow-hidden"
+                checked={selectedValues.includes(o)}
+                onSelect={(e) => e.preventDefault()}
+                onCheckedChange={(checked) => {
+                  const next = checked ? [...selectedValues, o] : selectedValues.filter(x => x !== o);
+                  onSelect(next);
+                }}
+              >
+                <span className="truncate">{renderLabel ? renderLabel(o) : o}</span>
+              </DropdownMenuCheckboxItem>
+              <Button 
+                variant="secondary" 
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 h-6 px-2 text-[10px] opacity-0 group-hover:opacity-100 z-10 shadow-sm"
+                onClick={(e) => {
+                   e.preventDefault();
+                   e.stopPropagation();
+                   onSelect([o]);
+                }}
+              >
+                Duy nhất
+              </Button>
+            </div>
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
@@ -170,12 +183,45 @@ export default function DashboardPage() {
     }));
   };
 
-  const availableYears = useMemo(() => Array.from(new Set(monthOptions.map(m => {
-    let y = m.split('-')[0];
-    if (y.length === 2) y = '20' + y;
-    if (y.length === 4 && y.startsWith('00')) y = '20' + y.substring(2);
-    return y;
-  }))).sort((a,b) => b.localeCompare(a)), [monthOptions]);
+  const availableYears = useMemo(() => {
+    const years = new Set<string>();
+    monthOptions.forEach(m => {
+      const parts = m.split('-');
+      let y = parts[0];
+      const mm = parts[1];
+      if (y.length === 2) y = '20' + y;
+      if (y.length === 4 && y.startsWith('00')) y = '20' + y.substring(2);
+      
+      const q = Math.ceil(parseInt(mm) / 3).toString();
+
+      const matchQuarter = dashboardFilter.quarters.length === 0 || dashboardFilter.quarters.includes(q);
+      const matchMonth = dashboardFilter.months.length === 0 || dashboardFilter.months.includes(mm);
+
+      if (matchQuarter && matchMonth) {
+        years.add(y);
+      }
+    });
+    return Array.from(years).sort((a,b) => b.localeCompare(a));
+  }, [monthOptions, dashboardFilter.quarters, dashboardFilter.months]);
+
+  const availableQuarters = useMemo(() => {
+    const quarters = new Set<string>();
+    monthOptions.forEach(m => {
+      const parts = m.split('-');
+      let y = parts[0];
+      const mm = parts[1];
+      if (y.length === 2) y = '20' + y;
+      if (y.length === 4 && y.startsWith('00')) y = '20' + y.substring(2);
+      
+      const matchYear = dashboardFilter.years.length === 0 || dashboardFilter.years.includes(y);
+      const matchMonth = dashboardFilter.months.length === 0 || dashboardFilter.months.includes(mm);
+
+      if (matchYear && matchMonth) {
+        quarters.add(Math.ceil(parseInt(mm) / 3).toString());
+      }
+    });
+    return Array.from(quarters).sort();
+  }, [monthOptions, dashboardFilter.years, dashboardFilter.months]);
 
   const availableMonths = useMemo(() => {
     const months = new Set<string>();
@@ -186,16 +232,17 @@ export default function DashboardPage() {
       if (y.length === 2) y = '20' + y;
       if (y.length === 4 && y.startsWith('00')) y = '20' + y.substring(2);
       
-      if (dashboardFilter.years.length === 0 || dashboardFilter.years.includes(y)) {
+      const q = Math.ceil(parseInt(mm) / 3).toString();
+
+      const matchYear = dashboardFilter.years.length === 0 || dashboardFilter.years.includes(y);
+      const matchQuarter = dashboardFilter.quarters.length === 0 || dashboardFilter.quarters.includes(q);
+
+      if (matchYear && matchQuarter) {
         months.add(mm);
       }
     });
     return Array.from(months).sort();
-  }, [monthOptions, dashboardFilter.years]);
-
-  const availableQuarters = useMemo(() => {
-    return Array.from(new Set(availableMonths.map(mm => Math.ceil(parseInt(mm) / 3).toString()))).sort();
-  }, [availableMonths]);
+  }, [monthOptions, dashboardFilter.years, dashboardFilter.quarters]);
 
   const activeMonths = useMemo(() => {
     return monthOptions.filter(m => {
@@ -289,13 +336,28 @@ export default function DashboardPage() {
   }, [scopedTx, filterMonths, filterProjects]);
 
   const dynamicTimelineMonths = useMemo(() => {
-    // Tìm tháng lớn nhất để làm mỏ neo (anchor)
-    let anchorMonth = monthOptions.length > 0 ? monthOptions[0] : new Date().toISOString().substring(0, 7);
+    // Lấy danh sách tất cả các tháng đã chuẩn hóa (YYYY-MM)
+    const normalizedMonths = Array.from(new Set(monthOptions.map(m => {
+      let y = m.split('-')[0];
+      const mm = m.split('-')[1];
+      if (y.length === 2) y = '20' + y;
+      if (y.length === 4 && y.startsWith('00')) y = '20' + y.substring(2);
+      return `${y}-${mm}`;
+    })));
+
+    let anchorMonth = normalizedMonths.length > 0 ? normalizedMonths.sort((a, b) => b.localeCompare(a))[0] : new Date().toISOString().substring(0, 7);
+    
     if (filterMonths.length > 0) {
-      anchorMonth = [...filterMonths].sort((a, b) => b.localeCompare(a))[0];
+      const normalizedFilterMonths = filterMonths.map(m => {
+        let y = m.split('-')[0];
+        const mm = m.split('-')[1];
+        if (y.length === 2) y = '20' + y;
+        if (y.length === 4 && y.startsWith('00')) y = '20' + y.substring(2);
+        return `${y}-${mm}`;
+      });
+      anchorMonth = normalizedFilterMonths.sort((a, b) => b.localeCompare(a))[0];
     }
     
-    // Tính ngược lại 11 tháng trước đó (tổng 12 tháng)
     const [y, m] = anchorMonth.split('-').map(Number);
     const result = [];
     for (let i = 11; i >= 0; i--) {
@@ -309,7 +371,13 @@ export default function DashboardPage() {
 
   const monthlyTrend = useMemo(() => {
     return dynamicTimelineMonths.map((month) => {
-      const rows = scopedTx.filter((t) => t.month === month);
+      const rows = scopedTx.filter((t) => {
+        let y = t.month.split('-')[0];
+        const m = t.month.split('-')[1];
+        if (y.length === 2) y = '20' + y;
+        if (y.length === 4 && y.startsWith('00')) y = '20' + y.substring(2);
+        return `${y}-${m}` === month;
+      });
       const Thu = rows.reduce((s: number, t: any) => s + (t.income || 0), 0);
       const Chi = rows.reduce((s: number, t: any) => s + (t.expense || 0), 0);
       return {

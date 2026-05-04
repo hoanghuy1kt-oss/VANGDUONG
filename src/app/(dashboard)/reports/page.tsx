@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -79,7 +80,7 @@ function FilterDropdown({
             <ChevronDown className="h-4 w-4 opacity-50 ml-1 shrink-0" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-[160px]" align="start">
+        <DropdownMenuContent className="w-[200px] max-h-[300px] overflow-y-auto" align="start">
           <DropdownMenuCheckboxItem 
              checked={selectedValues.length === 0} 
              onCheckedChange={() => onSelect([])}
@@ -87,17 +88,30 @@ function FilterDropdown({
             {placeholder}
           </DropdownMenuCheckboxItem>
           {options.map(o => (
-            <DropdownMenuCheckboxItem 
-              key={o}
-              checked={selectedValues.includes(o)}
-              onSelect={(e) => e.preventDefault()}
-              onCheckedChange={(checked) => {
-                const next = checked ? [...selectedValues, o] : selectedValues.filter(x => x !== o);
-                onSelect(next);
-              }}
-            >
-              {renderLabel ? renderLabel(o) : o}
-            </DropdownMenuCheckboxItem>
+            <div key={o} className="relative flex items-center group">
+              <DropdownMenuCheckboxItem 
+                className="flex-1 pr-16 cursor-pointer overflow-hidden"
+                checked={selectedValues.includes(o)}
+                onSelect={(e) => e.preventDefault()}
+                onCheckedChange={(checked) => {
+                  const next = checked ? [...selectedValues, o] : selectedValues.filter(x => x !== o);
+                  onSelect(next);
+                }}
+              >
+                <span className="truncate">{renderLabel ? renderLabel(o) : o}</span>
+              </DropdownMenuCheckboxItem>
+              <Button 
+                variant="secondary" 
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 h-6 px-2 text-[10px] opacity-0 group-hover:opacity-100 z-10 shadow-sm"
+                onClick={(e) => {
+                   e.preventDefault();
+                   e.stopPropagation();
+                   onSelect([o]);
+                }}
+              >
+                Duy nhất
+              </Button>
+            </div>
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
@@ -124,12 +138,45 @@ export default function ReportsPage() {
     return sorted.length > 0 ? sorted : [new Date().toISOString().substring(0, 7)];
   }, [globalTransactions]);
 
-  const availableYears = useMemo(() => Array.from(new Set(monthOptions.map(m => {
-    let y = m.split('-')[0];
-    if (y.length === 2) y = '20' + y;
-    if (y.length === 4 && y.startsWith('00')) y = '20' + y.substring(2);
-    return y;
-  }))).sort((a,b) => b.localeCompare(a)), [monthOptions]);
+  const availableYears = useMemo(() => {
+    const years = new Set<string>();
+    monthOptions.forEach(m => {
+      const parts = m.split('-');
+      let y = parts[0];
+      const mm = parts[1];
+      if (y.length === 2) y = '20' + y;
+      if (y.length === 4 && y.startsWith('00')) y = '20' + y.substring(2);
+      
+      const q = Math.ceil(parseInt(mm) / 3).toString();
+
+      const matchQuarter = reportsFilter.quarters.length === 0 || reportsFilter.quarters.includes(q);
+      const matchMonth = reportsFilter.months.length === 0 || reportsFilter.months.includes(mm);
+
+      if (matchQuarter && matchMonth) {
+        years.add(y);
+      }
+    });
+    return Array.from(years).sort((a,b) => b.localeCompare(a));
+  }, [monthOptions, reportsFilter.quarters, reportsFilter.months]);
+
+  const availableQuarters = useMemo(() => {
+    const quarters = new Set<string>();
+    monthOptions.forEach(m => {
+      const parts = m.split('-');
+      let y = parts[0];
+      const mm = parts[1];
+      if (y.length === 2) y = '20' + y;
+      if (y.length === 4 && y.startsWith('00')) y = '20' + y.substring(2);
+      
+      const matchYear = reportsFilter.years.length === 0 || reportsFilter.years.includes(y);
+      const matchMonth = reportsFilter.months.length === 0 || reportsFilter.months.includes(mm);
+
+      if (matchYear && matchMonth) {
+        quarters.add(Math.ceil(parseInt(mm) / 3).toString());
+      }
+    });
+    return Array.from(quarters).sort();
+  }, [monthOptions, reportsFilter.years, reportsFilter.months]);
 
   const availableMonths = useMemo(() => {
     const months = new Set<string>();
@@ -140,16 +187,17 @@ export default function ReportsPage() {
       if (y.length === 2) y = '20' + y;
       if (y.length === 4 && y.startsWith('00')) y = '20' + y.substring(2);
       
-      if (reportsFilter.years.length === 0 || reportsFilter.years.includes(y)) {
+      const q = Math.ceil(parseInt(mm) / 3).toString();
+
+      const matchYear = reportsFilter.years.length === 0 || reportsFilter.years.includes(y);
+      const matchQuarter = reportsFilter.quarters.length === 0 || reportsFilter.quarters.includes(q);
+
+      if (matchYear && matchQuarter) {
         months.add(mm);
       }
     });
     return Array.from(months).sort();
-  }, [monthOptions, reportsFilter.years]);
-
-  const availableQuarters = useMemo(() => {
-    return Array.from(new Set(availableMonths.map(mm => Math.ceil(parseInt(mm) / 3).toString()))).sort();
-  }, [availableMonths]);
+  }, [monthOptions, reportsFilter.years, reportsFilter.quarters]);
 
   const activeMonths = useMemo(() => {
     return monthOptions.filter(m => {
@@ -331,7 +379,8 @@ export default function ReportsPage() {
             />
           </div>
             
-            <div className="space-y-1 sm:space-y-1.5 flex flex-col w-full sm:w-auto mt-0.5 sm:mt-0">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end mt-3 sm:mt-0">
+            <div className="space-y-1 sm:space-y-1.5 flex flex-col w-full sm:w-auto">
               <label className="text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">Dự án ({filterProjects.length === 0 ? 'Tất cả' : filterProjects.length})</label>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -381,6 +430,17 @@ export default function ReportsPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+
+            {(reportsFilter.years.length > 0 || reportsFilter.quarters.length > 0 || reportsFilter.months.length > 0 || filterProjects.length > 0) && (
+              <Button 
+                variant="ghost" 
+                className="h-9 sm:h-10 px-3 text-red-500 hover:text-red-600 hover:bg-red-50/50 transition-colors shrink-0"
+                onClick={() => setReportsFilter({ years: [], quarters: [], months: [], filterProjects: [] })}
+              >
+                Xóa lọc
+              </Button>
+            )}
+          </div>
           </div>
         </CardContent>
       </Card>
